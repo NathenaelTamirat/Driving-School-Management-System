@@ -35,10 +35,14 @@ frontend/.next/
 frontend/.nuxt/
 
 # ========================
-# ========================
 # Docs
 # ========================
-docs/frontend implementation/
+docs/frontendimplementation.md
+docs/Frontendimplementation.md
+docs/frontend_documentation/
+docs/FrontEnd_Documentation.MD
+docs/API_Documentation.MD
+DOCS/
 
 # ========================
 # OS / Editor

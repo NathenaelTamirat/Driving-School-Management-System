@@ -66,7 +66,6 @@ export function FileUpload({
       const preview = await generatePreview(file);
       const type = getFileType(file);
 
-      // Simulate progress
       const uploaded: UploadedFile = {
         file,
         preview,
@@ -74,7 +73,6 @@ export function FileUpload({
         progress: 0,
       };
 
-      // Simulate upload progress
       const interval = setInterval(() => {
         uploaded.progress = Math.min(uploaded.progress + 20, 100);
         if (uploaded.progress >= 100) {
@@ -83,7 +81,6 @@ export function FileUpload({
         }
       }, 150);
 
-      // Small delay to show progress animation
       setTimeout(() => {
         clearInterval(interval);
         uploaded.progress = 100;
