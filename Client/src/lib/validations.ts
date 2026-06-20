@@ -56,12 +56,18 @@ export const studentSchema = z.object({
     .max(20, "House number must be 20 characters or less"),
   kebele: z
     .string()
-    .min(1, "Kebele is required")
-    .max(50, "Kebele must be 50 characters or less"),
-  wereda: z
+    .max(50, "Kebele must be 50 characters or less")
+    .optional()
+    .or(z.literal("")),
+  woreda: z
     .string()
-    .min(1, "Wereda/Subcity is required")
-    .max(50, "Wereda must be 50 characters or less"),
+    .min(1, "Woreda is required")
+    .max(50, "Woreda must be 50 characters or less"),
+  subcity: z
+    .string()
+    .max(50, "Subcity must be 50 characters or less")
+    .optional()
+    .or(z.literal("")),
   city: z
     .string()
     .min(1, "City/Town is required")

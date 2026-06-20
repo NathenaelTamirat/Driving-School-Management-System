@@ -83,7 +83,8 @@ export function StudentForm() {
       address: "",
       house_number: "",
       kebele: "",
-      wereda: "",
+      woreda: "",
+      subcity: "",
       city: "",
       student_id: "",
       document_id: "",
@@ -448,9 +449,7 @@ export function StudentForm() {
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="kebele">
-                          Kebele <span className="text-destructive">*</span>
-                        </Label>
+                        <Label htmlFor="kebele">Kebele</Label>
                         <Input
                           id="kebele"
                           {...register("kebele")}
@@ -465,22 +464,36 @@ export function StudentForm() {
                         )}
                       </div>
                     </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-3">
                       <div className="space-y-2">
-                        <Label htmlFor="wereda">
-                          Wereda / Subcity{" "}
-                          <span className="text-destructive">*</span>
+                        <Label htmlFor="woreda">
+                          Woreda <span className="text-destructive">*</span>
                         </Label>
                         <Input
-                          id="wereda"
-                          {...register("wereda")}
-                          placeholder="Wereda or Subcity"
-                          className={cn(errors.wereda && "border-destructive")}
+                          id="woreda"
+                          {...register("woreda")}
+                          placeholder="Woreda"
+                          className={cn(errors.woreda && "border-destructive")}
                         />
-                        {errors.wereda && (
+                        {errors.woreda && (
                           <p className="flex items-center gap-1 text-xs text-destructive">
                             <AlertCircle className="h-3 w-3" />
-                            {errors.wereda.message}
+                            {errors.woreda.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="subcity">Subcity</Label>
+                        <Input
+                          id="subcity"
+                          {...register("subcity")}
+                          placeholder="Subcity"
+                          className={cn(errors.subcity && "border-destructive")}
+                        />
+                        {errors.subcity && (
+                          <p className="flex items-center gap-1 text-xs text-destructive">
+                            <AlertCircle className="h-3 w-3" />
+                            {errors.subcity.message}
                           </p>
                         )}
                       </div>
@@ -683,7 +696,8 @@ export function StudentForm() {
                       { label: "Address", value: watch("address") },
                       { label: "House No.", value: watch("house_number") },
                       { label: "Kebele", value: watch("kebele") },
-                      { label: "Wereda", value: watch("wereda") },
+                      { label: "Woreda", value: watch("woreda") },
+                      { label: "Subcity", value: watch("subcity") },
                       { label: "City", value: watch("city") },
                     ].map(
                       (field) =>
