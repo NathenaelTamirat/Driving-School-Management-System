@@ -35,6 +35,12 @@ frontend/.next/
 frontend/.nuxt/
 
 # ========================
+# ========================
+# Docs
+# ========================
+docs/frontend implementation/
+
+# ========================
 # OS / Editor
 # ========================
 .DS_Store
