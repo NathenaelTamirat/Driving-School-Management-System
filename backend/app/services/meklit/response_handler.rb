@@ -58,6 +58,9 @@ module Meklit
       # Update all students in batch to graduated status
       batch.students.update_all(status: 'graduated')
 
+      # Send approval notification emails
+      send_batch_approval_emails
+
       logger.info "[ResponseHandler] Batch #{batch.id} approved by ERTA"
       true
     rescue ActiveRecord::RecordInvalid => e
@@ -116,6 +119,24 @@ module Meklit
           logger.warn "[ResponseHandler] Student #{student.student_id} rejected: #{student_response[:reason]}"
         end
       end
+    end
+
+    # Send batch approval emails to admin and students
+    def send_batch_approval_emails
+      # Send to admin
+      admin_email = ENV['ADMIN_EMAIL'] || 'admin@drivingschool.et'
+      MeklitMailer.batch_approval(batch, admin_email).deliver_later
+
+      # Send to individual students
+      batch.students.find_each do |student|
+        # TODO: Add email field to student model and use student.email
+        # For now, using a placeholder email
+        student_email = "#{student.student_id}@example.com"
+        MeklitMailer.student_approval(student, student_email).deliver_later
+      end
+    rescue StandardError => e
+      logger.error "[ResponseHandler] Failed to send approval emails: #{e.message}"
+      # Don't fail the process if emails fail
     end
   end
 end

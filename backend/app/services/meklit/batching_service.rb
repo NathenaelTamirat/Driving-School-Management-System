@@ -38,7 +38,10 @@ module Meklit
       batch.update!(status: 'submitted', submitted_at: Time.current)
       logger.info "[BatchingService] Batch #{batch.id} successfully submitted to ERTA"
 
-      # Step 5: Schedule response check job
+      # Step 5: Send submission notification email
+      send_submission_email
+
+      # Step 6: Schedule response check job
       schedule_response_check
 
       { success: true, batch_id: batch.id, api_response: api_response }
@@ -87,6 +90,16 @@ module Meklit
       # Schedule the job to run after a delay (e.g., 5 minutes)
       MeklitBatchExportJob.set(wait: 5.minutes).perform_later(batch.id)
       logger.info "[BatchingService] Response check scheduled for batch #{batch.id}"
+    end
+
+    # Send batch submission notification email
+    def send_submission_email
+      admin_email = ENV['ADMIN_EMAIL'] || 'admin@drivingschool.et'
+      MeklitMailer.batch_submission(batch, admin_email).deliver_later
+      logger.info "[BatchingService] Submission email sent for batch #{batch.id}"
+    rescue StandardError => e
+      logger.error "[BatchingService] Failed to send submission email: #{e.message}"
+      # Don't fail the process if email fails
     end
 
     # Return error result hash

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background-color: <%= @passed ? '#059669' : '#dc2626' %>;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-radius: 5px 5px 0 0;
+    }
+    .content {
+      background-color: #f9fafb;
+      padding: 30px;
+      border: 1px solid #e5e7eb;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+    }
+    .footer {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+    }
+    .info-box {
+      background-color: <%= @passed ? '#d1fae5' : '#fee2e2' %>;
+      border-left: 4px solid <%= @passed ? '#059669' : '#dc2626' %>;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .score-box {
+      background-color: #f3f4f6;
+      padding: 20px;
+      border-radius: 5px;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .score {
+      font-size: 48px;
+      font-weight: bold;
+      color: <%= @passed ? '#059669' : '#dc2626' %>;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1><%= @passed ? '✓ Exam Passed' : '✗ Exam Failed' %></h1>
+  </div>
+
+  <div class="content">
+    <p>Dear <%= @student.first_name %> <%= @student.last_name %>,</p>
+
+    <p>Your <%= @exam_type %> exam results are now available.</p>
+
+    <div class="score-box">
+      <p>Your Score:</p>
+      <div class="score"><%= @score %>%</div>
+      <p><%= @passed ? 'Congratulations! You passed.' : 'Unfortunately, you did not pass.' %></p>
+    </div>
+
+    <div class="info-box">
+      <h3>Exam Details:</h3>
+      <ul>
+        <li><strong>Exam Type:</strong> <%= @exam_type %></li>
+        <li><strong>Score:</strong> <%= @score %>%</li>
+        <li><strong>Result:</strong> <%= @passed ? 'Passed' : 'Failed' %></li>
+        <li><strong>Student ID:</strong> <%= @student.student_id %></li>
+      </ul>
+    </div>
+
+    <% if @passed %>
+      <p><strong>Next Steps:</strong></p>
+      <ul>
+        <li>You may proceed to the next stage of your training</li>
+        <li>Contact your instructor for further instructions</li>
+      </ul>
+    <% else %>
+      <p><strong>Next Steps:</strong></p>
+      <ul>
+        <li>A 7-day penalty has been applied to your account</li>
+        <li>You may retake the exam after the penalty period</li>
+        <li>Contact your instructor for additional training options</li>
+      </ul>
+    <% end %>
+
+    <p>If you have any questions about your results, please contact our office.</p>
+
+    <p>Best regards,<br>Driving School Management System</p>
+  </div>
+
+  <div class="footer">
+    <p>This is an automated email. Please do not reply to this message.</p>
+    <p>&copy; <%= Time.current.year %> Driving School Management System. All rights reserved.</p>
+  </div>
+</body>
+</html>

@@ -23,6 +23,8 @@ module Api
         @exam_booking = @student.exam_bookings.new(exam_booking_params)
 
         if @exam_booking.save
+          # Send exam booking notification email
+          send_exam_booking_email
           render json: @exam_booking, status: :created
         else
           render json: { errors: @exam_booking.errors.full_messages }, status: :unprocessable_entity
@@ -58,6 +60,9 @@ module Api
             penalty_engine.apply_failure_penalty
           end
 
+          # Send exam result notification email
+          send_exam_result_email
+
           render json: @exam_booking
         else
           render json: { errors: @exam_booking.errors.full_messages }, status: :unprocessable_entity
@@ -87,6 +92,26 @@ module Api
         unless validator.call
           render json: { errors: validator.errors }, status: :forbidden
         end
+      end
+
+      def send_exam_booking_email
+        # TODO: Add email field to student model and use @student.email
+        # For now, using a placeholder email
+        student_email = "#{@student.student_id}@example.com"
+        MeklitMailer.exam_booking(@exam_booking, student_email).deliver_later
+      rescue StandardError => e
+        Rails.logger.error "[ExamBookingsController] Failed to send booking email: #{e.message}"
+        # Don't fail the request if email fails
+      end
+
+      def send_exam_result_email
+        # TODO: Add email field to student model and use @student.email
+        # For now, using a placeholder email
+        student_email = "#{@student.student_id}@example.com"
+        MeklitMailer.exam_result(@exam_booking, student_email).deliver_later
+      rescue StandardError => e
+        Rails.logger.error "[ExamBookingsController] Failed to send result email: #{e.message}"
+        # Don't fail the request if email fails
       end
     end
   end
