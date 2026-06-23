@@ -78,4 +78,39 @@ RSpec.describe 'Api::V1::ExamBookings', type: :request do
       expect(exam_booking.reload.status).to eq('cancelled')
     end
   end
+
+  describe 'POST /api/v1/students/:student_id/exam_bookings/:id/record_result' do
+    context 'when recording a passing score' do
+      it 'updates exam with score and marks as completed' do
+        result_params = {
+          exam_booking: {
+            score: 75,
+            notes: 'Good performance'
+          }
+        }
+        post "/api/v1/students/#{student.id}/exam_bookings/#{exam_booking.id}/record_result", params: result_params
+        expect(response).to have_http_status(:ok)
+        expect(exam_booking.reload.status).to eq('completed')
+        expect(exam_booking.score).to eq(75)
+        expect(student.reload.under_penalty).to be false
+      end
+    end
+
+    context 'when recording a failing score' do
+      it 'updates exam with score and applies penalty' do
+        result_params = {
+          exam_booking: {
+            score: 30,
+            notes: 'Needs improvement'
+          }
+        }
+        post "/api/v1/students/#{student.id}/exam_bookings/#{exam_booking.id}/record_result", params: result_params
+        expect(response).to have_http_status(:ok)
+        expect(exam_booking.reload.status).to eq('completed')
+        expect(exam_booking.score).to eq(30)
+        expect(student.reload.under_penalty).to be true
+        expect(student.penalty_end_date).not_to be_nil
+      end
+    end
+  end
 end

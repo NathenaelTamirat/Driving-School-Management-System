@@ -27,6 +27,11 @@ class Student < ApplicationRecord
     status == 'exam_eligible'
   end
 
+  # Check if student is currently under penalty
+  def under_penalty_active?
+    under_penalty? && penalty_end_date.present? && penalty_end_date >= Time.current
+  end
+
   aasm column: :status do
     state :registered, initial: true
     state :theory_in_progress

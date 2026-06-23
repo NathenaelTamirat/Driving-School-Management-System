@@ -47,6 +47,23 @@ module Api
         end
       end
 
+      # POST /api/v1/students/:student_id/exam_bookings/:id/record_result
+      def record_result
+        result_params = params.require(:exam_booking).permit(:score, :notes)
+
+        if @exam_booking.complete!(result_params[:score], result_params[:notes])
+          # Apply penalty if exam was failed
+          if @exam_booking.failed?
+            penalty_engine = Penalty::PenaltyEngine.new(@student, @exam_booking)
+            penalty_engine.apply_failure_penalty
+          end
+
+          render json: @exam_booking
+        else
+          render json: { errors: @exam_booking.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
+
       private
 
       def set_student

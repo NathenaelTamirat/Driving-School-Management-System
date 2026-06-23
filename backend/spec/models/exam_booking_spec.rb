@@ -83,6 +83,15 @@ RSpec.describe ExamBooking, type: :model do
       expect(exam_booking.score).to eq(85)
       expect(exam_booking.completed_at).not_to be_nil
     end
+
+    it 'marks exam as completed with score and notes' do
+      exam_booking.save!
+      exam_booking.complete!(85, 'Excellent performance')
+      expect(exam_booking.status).to eq('completed')
+      expect(exam_booking.score).to eq(85)
+      expect(exam_booking.notes).to eq('Excellent performance')
+      expect(exam_booking.completed_at).not_to be_nil
+    end
   end
 
   describe '#cancel!' do
@@ -98,6 +107,44 @@ RSpec.describe ExamBooking, type: :model do
       exam_booking.save!
       exam_booking.mark_no_show!
       expect(exam_booking.status).to eq('no_show')
+    end
+  end
+
+  describe '#passed?' do
+    it 'returns true when exam is completed with passing score' do
+      exam_booking.save!
+      exam_booking.complete!(60)
+      expect(exam_booking.passed?).to be true
+    end
+
+    it 'returns false when exam is completed with failing score' do
+      exam_booking.save!
+      exam_booking.complete!(30)
+      expect(exam_booking.passed?).to be false
+    end
+
+    it 'returns false when exam is not completed' do
+      exam_booking.save!
+      expect(exam_booking.passed?).to be false
+    end
+  end
+
+  describe '#failed?' do
+    it 'returns true when exam is completed with failing score' do
+      exam_booking.save!
+      exam_booking.complete!(30)
+      expect(exam_booking.failed?).to be true
+    end
+
+    it 'returns false when exam is completed with passing score' do
+      exam_booking.save!
+      exam_booking.complete!(60)
+      expect(exam_booking.failed?).to be false
+    end
+
+    it 'returns false when exam is not completed' do
+      exam_booking.save!
+      expect(exam_booking.failed?).to be false
     end
   end
 end

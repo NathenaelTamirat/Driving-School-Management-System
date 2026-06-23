@@ -11,6 +11,7 @@ Rails.application.routes.draw do
       resources :students, only: [:index, :show, :create] do
         resources :exam_bookings, only: [:index, :show, :create, :update] do
           post :cancel, on: :member
+          post :record_result, on: :member
         end
       end
     end

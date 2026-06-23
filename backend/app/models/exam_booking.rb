@@ -11,6 +11,19 @@ class ExamBooking < ApplicationRecord
   validate :scheduled_date_must_be_in_future, on: :create
   validate :score_required_if_completed
 
+  # Passing score threshold (can be configured per exam type)
+  PASSING_SCORE = 50
+
+  # Check if exam was passed
+  def passed?
+    completed? && score.present? && score >= PASSING_SCORE
+  end
+
+  # Check if exam was failed
+  def failed?
+    completed? && score.present? && score < PASSING_SCORE
+  end
+
   scope :scheduled, -> { where(status: 'scheduled') }
   scope :completed, -> { where(status: 'completed') }
   scope :upcoming, -> { where('scheduled_date >= ?', Time.current) }
@@ -34,8 +47,8 @@ class ExamBooking < ApplicationRecord
   end
 
   # Mark exam as completed with score
-  def complete!(score)
-    update!(status: 'completed', score: score, completed_at: Time.current)
+  def complete!(score, notes = nil)
+    update!(status: 'completed', score: score, notes: notes, completed_at: Time.current)
   end
 
   # Cancel the exam booking
