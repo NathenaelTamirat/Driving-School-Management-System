@@ -7,7 +7,7 @@ FactoryBot.define do
     first_name { Faker::Name.first_name }
     middle_name { Faker::Name.middle_name }
     last_name { Faker::Name.last_name }
-    date_of_birth { Faker::Date.birthday(min: 18, max: 65) }
+    date_of_birth { Faker::Date.birthday(min_age: 18, max_age: 65) }
     blood_type { %w[A+ A- B+ B- AB+ AB- O+ O-].sample }
     address { Faker::Address.street_address }
     house_number { Faker::Address.building_number }

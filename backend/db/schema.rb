@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_23_191500) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_25_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -39,6 +39,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_23_191500) do
     t.index ["scheduled_date"], name: "index_exam_bookings_on_scheduled_date"
     t.index ["status"], name: "index_exam_bookings_on_status"
     t.index ["student_id"], name: "index_exam_bookings_on_student_id"
+  end
+
+  create_table "jwt_denylist", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "exp", null: false
+    t.string "jti", null: false
+    t.datetime "updated_at", null: false
+    t.index ["jti"], name: "index_jwt_denylist_on_jti"
   end
 
   create_table "students", force: :cascade do |t|
@@ -76,6 +84,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_23_191500) do
     t.index ["penalty_end_date"], name: "index_students_on_penalty_end_date"
     t.index ["student_id"], name: "index_students_on_student_id", unique: true
     t.index ["under_penalty"], name: "index_students_on_under_penalty"
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", default: "", null: false
+    t.string "encrypted_password", default: "", null: false
+    t.string "full_name", null: false
+    t.string "instructor_category"
+    t.string "instructor_license_number"
+    t.boolean "is_qualified_instructor", default: false
+    t.string "phone_number"
+    t.datetime "remember_created_at"
+    t.datetime "reset_password_sent_at"
+    t.string "reset_password_token"
+    t.string "role", default: "student", null: false
+    t.datetime "updated_at", null: false
+    t.integer "years_experience"
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["role"], name: "index_users_on_role"
+    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying, 'instructor'::character varying, 'clerk'::character varying, 'student'::character varying]::text[])", name: "user_role_check"
   end
 
   add_foreign_key "exam_bookings", "students"

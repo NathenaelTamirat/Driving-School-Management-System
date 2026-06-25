@@ -47,4 +47,24 @@ students.each do |attrs|
   puts "Seeded student #{student.student_id} (#{student.status})"
 end
 
+if defined?(User)
+  seed_users = [
+    { email: "admin@drivingschool.et", full_name: "System Admin", role: "admin" },
+    { email: "clerk@drivingschool.et", full_name: "Front Desk Clerk", role: "clerk" },
+    {
+      email: "instructor@drivingschool.et", full_name: "Driving Instructor",
+      role: "instructor", instructor_license_number: "LIC-0001",
+      instructor_category: "B", is_qualified_instructor: true
+    }
+  ]
+
+  seed_users.each do |attrs|
+    user = User.find_or_initialize_by(email: attrs[:email])
+    user.assign_attributes(attrs.merge(password: "Password123!"))
+    user.save!
+    puts "Seeded user #{user.email} (#{user.role})"
+  end
+  puts "Default password for all seeded users: Password123!"
+end
+
 puts "Done. Batches=#{Batch.count} Students=#{Student.count}"

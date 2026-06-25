@@ -42,6 +42,7 @@ services:
       DATABASE_USERNAME: ${DATABASE_USERNAME:-postgres}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       DATABASE_NAME: ${DATABASE_NAME:-backend_development}
+      DEVISE_JWT_SECRET_KEY: ${DEVISE_JWT_SECRET_KEY:-}
     # Host port configurable to avoid clashing with other local services on 8080.
     ports:
       - "${RAILS_PUBLISHED_PORT:-8080}:8080"

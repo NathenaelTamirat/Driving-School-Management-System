@@ -14,3 +14,10 @@
 # ActiveSupport::Inflector.inflections(:en) do |inflect|
 #   inflect.acronym "RESTful"
 # end
+
+# ERTA is an acronym (Ethiopian Roads & Transport Authority), so the app/services/erta
+# directory must autoload as `ERTA`, not `Erta`. Without this, Zeitwerk raises
+# "uninitialized constant ERTA" / "expected file to define Erta".
+ActiveSupport::Inflector.inflections(:en) do |inflect|
+  inflect.acronym "ERTA"
+end
