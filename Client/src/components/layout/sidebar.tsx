@@ -14,9 +14,9 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-64 flex-col bg-[#0f2744] text-white">
+    <aside className="flex h-full w-64 flex-col border-r border-border bg-sidebar text-sidebar-foreground shadow-sm">
       <div className="flex h-16 items-center px-6">
-        <Link href="/" className="text-xl font-bold tracking-wide text-white">
+        <Link href="/" className="text-xl font-semibold tracking-wide text-sidebar-foreground">
           DSAS
         </Link>
       </div>
@@ -34,8 +34,8 @@ export function Sidebar() {
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-[#1e3a5f] text-white"
-                      : "text-slate-300 hover:bg-[#1e3a5f]/60 hover:text-white",
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                      : "text-sidebar-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
                   )}
                 >
                   <Icon className="h-5 w-5" />
