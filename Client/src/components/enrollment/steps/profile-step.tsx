@@ -2,17 +2,25 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Calendar } from "lucide-react";
+import { ArrowRight, Calendar, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEnrollment } from "@/components/enrollment/enrollment-provider";
 import {
   profileStepSchema,
   type ProfileStepValues,
 } from "@/lib/enrollment-validations";
+import { BLOOD_TYPE_OPTIONS } from "@/lib/validations";
 import { cn } from "@/lib/utils";
 
 type ProfileStepProps = {
@@ -55,11 +63,16 @@ function ProfileStepForm({
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<ProfileStepValues>({
     resolver: zodResolver(profileStepSchema),
     defaultValues: profile,
   });
+
+  const watchedBloodType = watch("bloodType");
+  const watchedVerified = watch("verified");
 
   const onSubmit = (data: ProfileStepValues) => {
     updateProfile(data);
@@ -82,48 +95,50 @@ function ProfileStepForm({
         </h2>
 
         <div className="mt-6 grid gap-5 sm:grid-cols-2">
-          <Field
-            label="First Name (English)"
-            error={errors.firstNameEn?.message}
-          >
+          <Field label="First Name (English)" error={errors.firstNameEn?.message} required>
             <Input
               {...register("firstNameEn")}
               placeholder="e.g. Abebe"
               className={fieldClass(errors.firstNameEn)}
             />
           </Field>
-          <Field
-            label="Father's Name (English)"
-            error={errors.fatherNameEn?.message}
-          >
+          <Field label="Father's Name (English)" error={errors.fatherNameEn?.message} required>
             <Input
               {...register("fatherNameEn")}
               placeholder="e.g. Kebede"
               className={fieldClass(errors.fatherNameEn)}
             />
           </Field>
-          <Field
-            label="First Name (Amharic)"
-            error={errors.firstNameAm?.message}
-          >
+          <Field label="Grandfather's Name (English)" error={errors.lastNameEn?.message} required>
+            <Input
+              {...register("lastNameEn")}
+              placeholder="e.g. Tadesse"
+              className={fieldClass(errors.lastNameEn)}
+            />
+          </Field>
+          <Field label="First Name (Amharic)" error={errors.firstNameAm?.message} required>
             <Input
               {...register("firstNameAm")}
               placeholder="e.g. አበበ"
               className={fieldClass(errors.firstNameAm)}
             />
           </Field>
-          <Field
-            label="Father's Name (Amharic)"
-            error={errors.fatherNameAm?.message}
-          >
+          <Field label="Father's Name (Amharic)" error={errors.fatherNameAm?.message} required>
             <Input
               {...register("fatherNameAm")}
               placeholder="e.g. ከበደ"
               className={fieldClass(errors.fatherNameAm)}
             />
           </Field>
+          <Field label="Grandfather's Name (Amharic)" error={errors.lastNameAm?.message} required>
+            <Input
+              {...register("lastNameAm")}
+              placeholder="e.g. ታደሰ"
+              className={fieldClass(errors.lastNameAm)}
+            />
+          </Field>
 
-          <Field label="Phone Number" error={errors.phone?.message}>
+          <Field label="Phone Number" error={errors.phone?.message} required>
             <div className="flex overflow-hidden rounded-md border border-input bg-[#f8fafc]">
               <span className="flex items-center border-r border-input bg-slate-50 px-3 text-sm text-slate-600">
                 +251
@@ -136,7 +151,7 @@ function ProfileStepForm({
             </div>
           </Field>
 
-          <Field label="Date of Birth (EC)" error={errors.dateOfBirthEc?.message}>
+          <Field label="Date of Birth (EC)" error={errors.dateOfBirthEc?.message} required>
             <div className="relative">
               <Input
                 {...register("dateOfBirthEc")}
@@ -146,6 +161,113 @@ function ProfileStepForm({
               <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             </div>
           </Field>
+
+          <Field label="Blood Type" error={errors.bloodType?.message} required>
+            <Select
+              value={watchedBloodType}
+              onValueChange={(value) =>
+                setValue("bloodType", value, { shouldValidate: true })
+              }
+            >
+              <SelectTrigger className={fieldClass(errors.bloodType)}>
+                <SelectValue placeholder="Select blood type" />
+              </SelectTrigger>
+              <SelectContent>
+                {BLOOD_TYPE_OPTIONS.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+
+        <h2 className="mt-10 flex items-center gap-2 font-serif text-xl font-bold text-[#0f172a]">
+          <MapPin className="h-5 w-5" />
+          Address Information
+        </h2>
+
+        <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <Field label="Address" error={errors.address?.message} required className="sm:col-span-2">
+            <Input
+              {...register("address")}
+              placeholder="Street address"
+              className={fieldClass(errors.address)}
+            />
+          </Field>
+          <Field label="House Number" error={errors.houseNumber?.message} required>
+            <Input
+              {...register("houseNumber")}
+              placeholder="House number"
+              className={fieldClass(errors.houseNumber)}
+            />
+          </Field>
+          <Field label="Kebele" error={errors.kebele?.message}>
+            <Input
+              {...register("kebele")}
+              placeholder="Kebele"
+              className={fieldClass(errors.kebele)}
+            />
+          </Field>
+          <Field label="Woreda" error={errors.woreda?.message} required>
+            <Input
+              {...register("woreda")}
+              placeholder="Woreda"
+              className={fieldClass(errors.woreda)}
+            />
+          </Field>
+          <Field label="Subcity" error={errors.subcity?.message}>
+            <Input
+              {...register("subcity")}
+              placeholder="Subcity"
+              className={fieldClass(errors.subcity)}
+            />
+          </Field>
+          <Field label="City / Town" error={errors.city?.message} required>
+            <Input
+              {...register("city")}
+              placeholder="City or town"
+              className={fieldClass(errors.city)}
+            />
+          </Field>
+        </div>
+
+        <h2 className="mt-10 font-serif text-xl font-bold text-[#0f172a]">
+          Identification
+        </h2>
+
+        <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <Field label="Student ID" error={errors.studentId?.message} required>
+            <Input
+              {...register("studentId")}
+              placeholder="Student ID"
+              className={fieldClass(errors.studentId)}
+            />
+          </Field>
+          <Field label="Document ID" error={errors.documentId?.message} required>
+            <Input
+              {...register("documentId")}
+              placeholder="Document ID"
+              className={fieldClass(errors.documentId)}
+            />
+          </Field>
+          <Field label="Verification Status" error={errors.verified?.message}>
+            <Select
+              value={watchedVerified ? "true" : "false"}
+              onValueChange={(value) =>
+                setValue("verified", value === "true", { shouldValidate: true })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="false">Pending Verification</SelectItem>
+                <SelectItem value="true">Verified</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
 
         <h2 className="mt-10 font-serif text-xl font-bold text-[#0f172a]">
@@ -153,17 +275,14 @@ function ProfileStepForm({
         </h2>
 
         <div className="mt-6 grid gap-5 sm:grid-cols-2">
-          <Field label="Contact Name" error={errors.emergencyContactName?.message}>
+          <Field label="Contact Name" error={errors.emergencyContactName?.message} required>
             <Input
               {...register("emergencyContactName")}
               placeholder="Full Name"
               className={fieldClass(errors.emergencyContactName)}
             />
           </Field>
-          <Field
-            label="Contact Phone"
-            error={errors.emergencyContactPhone?.message}
-          >
+          <Field label="Contact Phone" error={errors.emergencyContactPhone?.message} required>
             <Input
               {...register("emergencyContactPhone")}
               placeholder="Phone Number"
@@ -190,14 +309,21 @@ function Field({
   label,
   error,
   children,
+  required,
+  className,
 }: {
   label: string;
   error?: string;
   children: React.ReactNode;
+  required?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="space-y-2">
-      <Label className="text-sm font-medium text-slate-700">{label}</Label>
+    <div className={cn("space-y-2", className)}>
+      <Label className="text-sm font-medium text-slate-700">
+        {label}
+        {required && <span className="ml-1 text-red-600">*</span>}
+      </Label>
       {children}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>

@@ -9,7 +9,6 @@ import {
   Info,
   Loader2,
   LogIn,
-  MessageCircle,
   Shield,
   User,
 } from "lucide-react";
@@ -45,7 +44,7 @@ export function PaymentStep({ onBack }: PaymentStepProps) {
 
   const category = getCategoryById(state.categoryId);
   const total = calculateEnrollmentTotal(state.categoryId);
-  const studentDisplayName = `${state.profile.firstNameEn} ${state.profile.fatherNameEn}`;
+  const studentDisplayName = `${state.profile.firstNameEn} ${state.profile.fatherNameEn} ${state.profile.lastNameEn}`;
 
   useEffect(() => {
     if (!state.paymentPhone && state.profile.phone) {
@@ -206,7 +205,7 @@ export function PaymentStep({ onBack }: PaymentStepProps) {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
             <div className="flex items-center gap-2 text-sm font-semibold text-[#0f172a]">
               <FileText className="h-4 w-4" />
@@ -265,23 +264,6 @@ export function PaymentStep({ onBack }: PaymentStepProps) {
               </p>
               <p>ERTA Authorized Training Center</p>
             </div>
-          </div>
-
-          <div className="rounded-xl bg-[#2563eb] p-5 text-white">
-            <h3 className="font-semibold">Need Assistance?</h3>
-            <p className="mt-2 text-sm text-blue-100">
-              Having trouble with Telebirr? Our technical support team is
-              available 24/7 for enrollment issues.
-            </p>
-            <Button
-              type="button"
-              variant="secondary"
-              className="mt-4 w-full bg-white text-[#2563eb] hover:bg-blue-50"
-              onClick={() => toast.info("Support chat is not connected yet")}
-            >
-              <MessageCircle className="h-4 w-4" />
-              Chat with Support
-            </Button>
           </div>
         </div>
       </div>

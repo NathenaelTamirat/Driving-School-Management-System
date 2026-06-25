@@ -45,34 +45,25 @@ export async function createStudent(
   }
 }
 
-function generateId(prefix: string, phone: string) {
-  const digits = phone.replace(/\D/g, "").slice(-6).padStart(6, "0");
-  const stamp = Date.now().toString().slice(-4);
-  return `${prefix}${digits}${stamp}`;
-}
-
 export function mapEnrollmentToStudentPayload(state: EnrollmentState) {
   const { profile } = state;
-  const phoneDigits = profile.phone.replace(/\D/g, "");
 
   return {
     batch_id: DEFAULT_BATCH_ID,
-    student_id: generateId("STU", phoneDigits),
-    document_id: generateId("DOC", phoneDigits),
+    student_id: profile.studentId.trim(),
+    document_id: profile.documentId.trim(),
     first_name: profile.firstNameEn.trim(),
     middle_name: profile.fatherNameEn.trim(),
-    last_name: profile.fatherNameEn.trim(),
+    last_name: profile.lastNameEn.trim(),
     date_of_birth: profile.dateOfBirthEc,
-    blood_type: "O+",
-    address: profile.emergencyContactName
-      ? `Emergency: ${profile.emergencyContactName}`
-      : "Addis Ababa",
-    house_number: "N/A",
-    woreda: "N/A",
-    city: "Addis Ababa",
-    kebele: "",
-    subcity: "",
-    verified: false,
+    blood_type: profile.bloodType,
+    address: profile.address.trim(),
+    house_number: profile.houseNumber.trim(),
+    woreda: profile.woreda.trim(),
+    city: profile.city.trim(),
+    kebele: profile.kebele.trim(),
+    subcity: profile.subcity.trim(),
+    verified: profile.verified,
   };
 }
 

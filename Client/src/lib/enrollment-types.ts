@@ -16,10 +16,22 @@ export type LicenseCategory = {
 export type EnrollmentProfile = {
   firstNameEn: string;
   fatherNameEn: string;
+  lastNameEn: string;
   firstNameAm: string;
   fatherNameAm: string;
+  lastNameAm: string;
   phone: string;
   dateOfBirthEc: string;
+  bloodType: string;
+  address: string;
+  houseNumber: string;
+  kebele: string;
+  woreda: string;
+  subcity: string;
+  city: string;
+  studentId: string;
+  documentId: string;
+  verified: boolean;
   emergencyContactName: string;
   emergencyContactPhone: string;
 };
@@ -121,10 +133,22 @@ export const REQUIRED_DOCUMENTS: {
 export const EMPTY_PROFILE: EnrollmentProfile = {
   firstNameEn: "",
   fatherNameEn: "",
+  lastNameEn: "",
   firstNameAm: "",
   fatherNameAm: "",
+  lastNameAm: "",
   phone: "",
   dateOfBirthEc: "",
+  bloodType: "",
+  address: "",
+  houseNumber: "",
+  kebele: "",
+  woreda: "",
+  subcity: "",
+  city: "",
+  studentId: "",
+  documentId: "",
+  verified: false,
   emergencyContactName: "",
   emergencyContactPhone: "",
 };
