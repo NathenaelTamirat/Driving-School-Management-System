@@ -5,11 +5,27 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Registers the :user Devise mapping (and controller helpers like
+  # authenticate_user! / current_user) without generating Devise's default
+  # routes — we expose custom auth endpoints under /api/v1/auth instead.
+  devise_for :users, skip: :all
+
   # API v1 routes
   namespace :api do
     namespace :v1 do
-      resources :students, only: [:index, :show, :create] do
-        resources :exam_bookings, only: [:index, :show, :create, :update] do
+      # Authentication
+      post   "auth/login",    to: "auth#login"
+      post   "auth/register", to: "auth#register"
+      delete "auth/logout",   to: "auth#logout"
+      get    "auth/me",       to: "auth#me"
+
+      # User management (admin-managed via UserPolicy)
+      resources :users, only: [ :index, :show, :create, :update, :destroy ]
+
+      resources :batches, only: [ :index, :show, :create ]
+      resources :license_categories, only: [ :index ]
+      resources :students, only: [ :index, :show, :create ] do
+        resources :exam_bookings, only: [ :index, :show, :create, :update ] do
           post :cancel, on: :member
           post :record_result, on: :member
         end

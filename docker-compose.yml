@@ -1,0 +1,71 @@
+# Local development stack: PostgreSQL + Rails API.
+# Quick start:
+#   docker compose up --build            # boot the whole stack
+#   docker compose run --rm rails-api bin/rails db:prepare   # create + migrate the dev DB
+#
+# Connection settings are passed as env vars and consumed by backend/config/database.yml.
+
+services:
+  # PostgreSQL 16 database
+  postgres:
+    image: postgres:16-alpine
+    container_name: driving_school_postgres
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${DATABASE_NAME:-backend_development}
+    # Host port is configurable to avoid clashing with a local Postgres already
+    # bound to 5432. Override with POSTGRES_PUBLISHED_PORT in your .env if needed.
+    ports:
+      - "${POSTGRES_PUBLISHED_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - driving_school_network
+
+  # Ruby on Rails API
+  rails-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: driving_school_rails_api
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0 -p 8080"
+    environment:
+      RAILS_ENV: development
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${DATABASE_NAME:-backend_development}
+      DEVISE_JWT_SECRET_KEY: ${DEVISE_JWT_SECRET_KEY:-}
+    # Host port configurable to avoid clashing with other local services on 8080.
+    ports:
+      - "${RAILS_PUBLISHED_PORT:-8080}:8080"
+    volumes:
+      - ./backend:/rails
+      - rails_bundle:/usr/local/bundle
+      - rails_tmp:/rails/tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+    networks:
+      - driving_school_network
+
+volumes:
+  postgres_data:
+    driver: local
+  rails_bundle:
+    driver: local
+  rails_tmp:
+    driver: local
+
+networks:
+  driving_school_network:
+    driver: bridge

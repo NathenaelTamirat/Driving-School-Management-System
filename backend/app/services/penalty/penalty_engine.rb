@@ -63,9 +63,9 @@ module Penalty
     # Calculate penalty end date based on exam type
     def calculate_penalty_end_date
       case exam_booking.exam_type
-      when 'theory'
+      when "theory"
         PENALTY_DAYS.days.from_now
-      when 'practical'
+      when "practical"
         PENALTY_DAYS.days.from_now
       else
         7.days.from_now

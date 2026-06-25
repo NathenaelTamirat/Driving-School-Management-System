@@ -134,6 +134,9 @@ export function EnrollmentProvider({ children }: { children: React.ReactNode }) 
       const raw = localStorage.getItem(ENROLLMENT_DRAFT_KEY);
       if (raw) {
         const draft = JSON.parse(raw) as PersistedDraft;
+        // Hydrating persisted draft must happen post-mount, not in a lazy
+        // useState initializer, which would cause an SSR hydration mismatch.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setState({
           ...INITIAL_ENROLLMENT_STATE,
           ...draft,

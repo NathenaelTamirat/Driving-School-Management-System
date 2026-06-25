@@ -48,7 +48,7 @@ class MeklitBatchExportJob < ApplicationJob
 
     return if retry_count > max_retries
 
-    delay = [5 * (2 ** (retry_count - 1)), 60].min # Max 60 minutes
+    delay = [ 5 * (2 ** (retry_count - 1)), 60 ].min # Max 60 minutes
     logger.info "[MeklitBatchExportJob] Scheduling retry #{retry_count}/#{max_retries} in #{delay} minutes"
 
     MeklitBatchExportJob.set(wait: delay.minutes).perform_later(batch_id)

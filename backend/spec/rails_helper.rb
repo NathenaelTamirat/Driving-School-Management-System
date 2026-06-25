@@ -1,6 +1,9 @@
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 require 'spec_helper'
-ENV['RAILS_ENV'] ||= 'test'
+# Force the test environment. Pinned (not ||=) because the Docker container sets
+# RAILS_ENV=development for the server; without this, `docker compose exec rspec`
+# would boot specs in development (wrong DB + host authorization 403s).
+ENV['RAILS_ENV'] = 'test'
 require_relative '../config/environment'
 require 'webmock/rspec'
 
@@ -74,4 +77,12 @@ RSpec.configure do |config|
   # arbitrary gems may also be filtered via:
   # config.filter_gems_from_backtrace("gem name")
   include FactoryBot::Syntax::Methods
+end
+
+# shoulda-matchers (used by model specs for belong_to / validate_* matchers)
+Shoulda::Matchers.configure do |config|
+  config.integrate do |with|
+    with.test_framework :rspec
+    with.library :rails
+  end
 end
