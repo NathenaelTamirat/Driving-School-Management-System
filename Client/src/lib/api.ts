@@ -6,6 +6,7 @@ type ApiResponse<T = unknown> = {
 };
 
 import type { EnrollmentState } from "@/lib/enrollment-types";
+import { UPLOAD_SLOTS } from "@/lib/validations";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 const DEFAULT_BATCH_ID = Number(process.env.NEXT_PUBLIC_DEFAULT_BATCH_ID || "1");
@@ -45,13 +46,20 @@ export async function createStudent(
   }
 }
 
+function generateId(prefix: string, phone: string) {
+  const digits = phone.replace(/\D/g, "").slice(-6).padStart(6, "0");
+  const stamp = Date.now().toString().slice(-4);
+  return `${prefix}${digits}${stamp}`;
+}
+
 export function mapEnrollmentToStudentPayload(state: EnrollmentState) {
   const { profile } = state;
+  const phoneDigits = profile.phone.replace(/\D/g, "");
 
   return {
     batch_id: DEFAULT_BATCH_ID,
-    student_id: profile.studentId.trim(),
-    document_id: profile.documentId.trim(),
+    student_id: generateId("STU", phoneDigits),
+    document_id: generateId("DOC", phoneDigits),
     first_name: profile.firstNameEn.trim(),
     middle_name: profile.fatherNameEn.trim(),
     last_name: profile.lastNameEn.trim(),
@@ -63,13 +71,34 @@ export function mapEnrollmentToStudentPayload(state: EnrollmentState) {
     city: profile.city.trim(),
     kebele: profile.kebele.trim(),
     subcity: profile.subcity.trim(),
-    verified: profile.verified,
+    verified: false,
   };
+}
+
+export function buildEnrollmentFormData(state: EnrollmentState): FormData {
+  const formData = new FormData();
+  const payload = mapEnrollmentToStudentPayload(state);
+
+  Object.entries(payload).forEach(([key, value]) => {
+    formData.append(`student[${key}]`, String(value));
+  });
+
+  UPLOAD_SLOTS.forEach(({ key }) => {
+    const doc = state.documents[key];
+    if (doc?.file) {
+      formData.append(`student[${key}]`, doc.file);
+    }
+  });
+
+  return formData;
 }
 
 export async function createStudentFromEnrollment(
   state: EnrollmentState,
 ): Promise<ApiResponse> {
-  const payload = mapEnrollmentToStudentPayload(state);
+  const hasUploads = UPLOAD_SLOTS.some((slot) => state.documents[slot.key]?.file);
+  const payload = hasUploads
+    ? buildEnrollmentFormData(state)
+    : mapEnrollmentToStudentPayload(state);
   return createStudent(payload);
 }

@@ -3,11 +3,12 @@
 import { useCallback, useRef, useState } from "react";
 import {
   ArrowRight,
-  CloudUpload,
-  ScanLine,
-  Upload,
-  IdCard,
+  FileText,
   GraduationCap,
+  ImageIcon,
+  ScanLine,
+  Stethoscope,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,19 +16,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useEnrollment } from "@/components/enrollment/enrollment-provider";
 import {
-  REQUIRED_DOCUMENTS,
+  ENROLLMENT_DOCUMENT_ROWS,
   type EnrollmentDocumentKey,
+  type EnrollmentDocumentRow,
   type UploadedDocument,
 } from "@/lib/enrollment-types";
+import {
+  ACCEPTED_DOC_TYPES,
+  ACCEPTED_IMAGE_TYPES,
+  MAX_FILE_SIZE,
+} from "@/lib/validations";
 import { cn } from "@/lib/utils";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ACCEPTED_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-];
 
 type DocumentsStepProps = {
   onBack: () => void;
@@ -36,21 +35,35 @@ type DocumentsStepProps = {
 
 export function DocumentsStep({ onBack, onContinue }: DocumentsStepProps) {
   const { state, setDocument } = useEnrollment();
-  const [isScanning, setIsScanning] = useState(false);
-  const bulkInputRef = useRef<HTMLInputElement>(null);
+  const [scanningKey, setScanningKey] = useState<EnrollmentDocumentKey | null>(
+    null,
+  );
 
-  const allRequiredUploaded = REQUIRED_DOCUMENTS.every(
-    (doc) => state.documents[doc.key],
+  const requiredRows = ENROLLMENT_DOCUMENT_ROWS.filter((row) => row.required);
+  const allRequiredUploaded = requiredRows.every(
+    (row) => state.documents[row.key],
   );
 
   const processFile = useCallback(
-    async (key: EnrollmentDocumentKey, file: File) => {
+    async (key: EnrollmentDocumentKey, file: File, acceptImages?: boolean) => {
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`${file.name} exceeds 5MB limit`);
+        toast.error(`${file.name} must be less than 10MB`);
         return;
       }
-      if (!ACCEPTED_TYPES.includes(file.type)) {
-        toast.error("Only PDF, JPG, and PNG files are supported");
+
+      const allowedTypes = acceptImages
+        ? ACCEPTED_IMAGE_TYPES
+        : ACCEPTED_DOC_TYPES;
+
+      if (
+        !allowedTypes.includes(file.type) &&
+        !(acceptImages && file.type.startsWith("image/"))
+      ) {
+        toast.error(
+          acceptImages
+            ? "Only image files (JPEG, PNG, WebP, HEIC) are allowed"
+            : "Only PDF, JPG, and PNG files are allowed",
+        );
         return;
       }
 
@@ -70,29 +83,15 @@ export function DocumentsStep({ onBack, onContinue }: DocumentsStepProps) {
     [setDocument],
   );
 
-  const handleBulkUpload = useCallback(
-    (files: FileList | null) => {
-      if (!files?.length) return;
-      const pending = [...REQUIRED_DOCUMENTS].filter(
-        (doc) => !state.documents[doc.key],
-      );
-      Array.from(files).forEach((file, index) => {
-        const target = pending[index];
-        if (target) processFile(target.key, file);
-      });
-    },
-    [processFile, state.documents],
-  );
-
-  const handleScan = () => {
-    setIsScanning(true);
-    toast.info("Scanner simulation started…");
+  const handleScan = (key: EnrollmentDocumentKey, label: string) => {
+    setScanningKey(key);
+    toast.info(`Starting scanner for ${label}…`);
     setTimeout(() => {
-      setIsScanning(false);
+      setScanningKey(null);
       toast.success(
-        "Scanner ready — use Upload Documents to attach files in this demo",
+        `Scanner ready for ${label} — use Upload to attach the file in this demo`,
       );
-    }, 1500);
+    }, 1200);
   };
 
   const handleContinue = () => {
@@ -105,87 +104,29 @@ export function DocumentsStep({ onBack, onContinue }: DocumentsStepProps) {
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#eff6ff] text-[#2563eb]">
-            <ScanLine className="h-6 w-6" />
-          </div>
-          <h3 className="font-semibold text-[#0f172a]">Scan Documents</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            Use an attached TWAIN-compatible scanner to directly capture
-            documents into the system.
-          </p>
-          <Button
-            type="button"
-            className="mt-4 bg-[#2563eb] hover:bg-[#1d4ed8]"
-            onClick={handleScan}
-            disabled={isScanning}
-          >
-            <ScanLine className="h-4 w-4" />
-            {isScanning ? "Scanning…" : "Scan Now"}
-          </Button>
-        </div>
-
-        <div
-          className="rounded-xl border-2 border-dashed border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-[#2563eb]/40"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            handleBulkUpload(e.dataTransfer.files);
-          }}
-        >
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#eff6ff] text-[#2563eb]">
-            <CloudUpload className="h-6 w-6" />
-          </div>
-          <h3 className="font-semibold text-[#0f172a]">Upload Documents</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            Drag and drop files here or{" "}
-            <button
-              type="button"
-              className="font-medium text-[#2563eb] hover:underline"
-              onClick={() => bulkInputRef.current?.click()}
-            >
-              browse
-            </button>
-            .
-          </p>
-          <p className="mt-2 text-xs text-slate-500">
-            Supported formats: PDF, JPG, PNG (Max 5MB)
-          </p>
-          <input
-            ref={bulkInputRef}
-            type="file"
-            multiple
-            accept=".pdf,.jpg,.jpeg,.png,.webp"
-            className="hidden"
-            onChange={(e) => handleBulkUpload(e.target.files)}
-          />
-        </div>
-      </div>
-
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="font-serif text-xl font-bold text-[#0f172a]">
           Required Documents
         </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Upload or scan each document individually. Supported formats: PDF,
+          JPG, PNG (max 10MB). Profile photo accepts images only.
+        </p>
 
         <ul className="mt-4 divide-y divide-slate-100">
-          {REQUIRED_DOCUMENTS.map((doc) => {
-            const uploaded = state.documents[doc.key];
-            const Icon =
-              doc.key === "national_id" ? IdCard : GraduationCap;
-
-            return (
-              <DocumentRow
-                key={doc.key}
-                icon={Icon}
-                title={doc.title}
-                description={doc.description}
-                uploaded={uploaded}
-                onUpload={(file) => processFile(doc.key, file)}
-                onRemove={() => setDocument(doc.key, null)}
-              />
-            );
-          })}
+          {ENROLLMENT_DOCUMENT_ROWS.map((row) => (
+            <DocumentRow
+              key={row.key}
+              row={row}
+              uploaded={state.documents[row.key]}
+              isScanning={scanningKey === row.key}
+              onUpload={(file) =>
+                processFile(row.key, file, row.acceptImages)
+              }
+              onScan={() => handleScan(row.key, row.label)}
+              onRemove={() => setDocument(row.key, null)}
+            />
+          ))}
         </ul>
       </div>
 
@@ -207,75 +148,118 @@ export function DocumentsStep({ onBack, onContinue }: DocumentsStepProps) {
 }
 
 function DocumentRow({
-  icon: Icon,
-  title,
-  description,
+  row,
   uploaded,
+  isScanning,
   onUpload,
+  onScan,
   onRemove,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
+  row: EnrollmentDocumentRow;
   uploaded?: UploadedDocument;
+  isScanning: boolean;
   onUpload: (file: File) => void;
+  onScan: () => void;
   onRemove: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const Icon = getRowIcon(row.key);
+
+  const accept = row.acceptImages
+    ? "image/jpeg,image/png,image/webp,image/heic,image/heif"
+    : "image/jpeg,image/png,image/webp,application/pdf";
 
   return (
-    <li className="flex flex-wrap items-center gap-4 py-4">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+    <li className="flex flex-wrap items-center gap-3 py-4 sm:gap-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
         <Icon className="h-5 w-5" />
       </div>
+
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-[#0f172a]">{title}</p>
-        <p className="text-sm text-slate-500">{description}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-medium text-[#0f172a]">{row.label}</p>
+          {!row.required && (
+            <span className="text-xs text-slate-400">(Optional)</span>
+          )}
+        </div>
+        <p className="text-sm text-slate-500">{row.description}</p>
         {uploaded && (
           <p className="mt-1 truncate text-xs text-emerald-600">
             {uploaded.name}
           </p>
         )}
       </div>
+
       <Badge
         variant={uploaded ? "success" : "destructive"}
         className={cn(
+          "shrink-0",
           !uploaded && "bg-red-50 text-red-700 hover:bg-red-50",
           uploaded && "bg-emerald-50 text-emerald-700 hover:bg-emerald-50",
         )}
       >
         {uploaded ? "Uploaded" : "Awaiting Upload"}
       </Badge>
-      {uploaded ? (
-        <Button type="button" variant="outline" size="sm" onClick={onRemove}>
-          Remove
-        </Button>
-      ) : (
-        <>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="text-[#2563eb]"
-            onClick={() => inputRef.current?.click()}
-          >
-            <Upload className="h-4 w-4" />
+
+      <div className="flex shrink-0 items-center gap-2">
+        {uploaded ? (
+          <Button type="button" variant="outline" size="sm" onClick={onRemove}>
+            Remove
           </Button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.webp"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onUpload(file);
-              e.target.value = "";
-            }}
-          />
-        </>
-      )}
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isScanning}
+              onClick={onScan}
+            >
+              <ScanLine className="h-4 w-4" />
+              {isScanning ? "Scanning…" : "Scan"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-[#2563eb] hover:bg-[#1d4ed8]"
+              onClick={() => inputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              Upload
+            </Button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept={accept}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onUpload(file);
+                e.target.value = "";
+              }}
+            />
+          </>
+        )}
+      </div>
     </li>
   );
+}
+
+function getRowIcon(key: EnrollmentDocumentKey) {
+  switch (key) {
+    case "profile_photo":
+      return ImageIcon;
+    case "yellow_card":
+      return FileText;
+    case "grade_8":
+    case "grade_10":
+    case "grade_12":
+      return GraduationCap;
+    case "medical":
+      return Stethoscope;
+    default:
+      return FileText;
+  }
 }
 
 function readPreview(file: File): Promise<string | null> {

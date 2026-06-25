@@ -7,9 +7,6 @@ export const profileStepSchema = z.object({
   firstNameEn: z.string().min(1, "First name is required").max(50),
   fatherNameEn: z.string().min(1, "Father's name is required").max(50),
   lastNameEn: z.string().min(1, "Grandfather's name is required").max(50),
-  firstNameAm: z.string().min(1, "First name (Amharic) is required").max(50),
-  fatherNameAm: z.string().min(1, "Father's name (Amharic) is required").max(50),
-  lastNameAm: z.string().min(1, "Grandfather's name (Amharic) is required").max(50),
   phone: z
     .string()
     .min(9, "Enter a valid phone number")
@@ -31,9 +28,6 @@ export const profileStepSchema = z.object({
   woreda: z.string().min(1, "Woreda is required").max(50),
   subcity: z.string().max(50, "Subcity must be 50 characters or less").optional().or(z.literal("")),
   city: z.string().min(1, "City/Town is required").max(50),
-  studentId: z.string().min(1, "Student ID is required").max(20),
-  documentId: z.string().min(1, "Document ID is required").max(20),
-  verified: z.boolean(),
   emergencyContactName: z.string().min(1, "Contact name is required").max(100),
   emergencyContactPhone: z
     .string()

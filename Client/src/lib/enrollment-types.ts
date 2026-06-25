@@ -1,3 +1,6 @@
+import type { UploadSlot } from "@/lib/validations";
+import { UPLOAD_SLOTS } from "@/lib/validations";
+
 export type LicenseCategoryId = "auto" | "motor" | "public1" | "drycargo1";
 
 export type LicenseCategory = {
@@ -17,9 +20,6 @@ export type EnrollmentProfile = {
   firstNameEn: string;
   fatherNameEn: string;
   lastNameEn: string;
-  firstNameAm: string;
-  fatherNameAm: string;
-  lastNameAm: string;
   phone: string;
   dateOfBirthEc: string;
   bloodType: string;
@@ -29,14 +29,11 @@ export type EnrollmentProfile = {
   woreda: string;
   subcity: string;
   city: string;
-  studentId: string;
-  documentId: string;
-  verified: boolean;
   emergencyContactName: string;
   emergencyContactPhone: string;
 };
 
-export type EnrollmentDocumentKey = "national_id" | "education_certificate";
+export type EnrollmentDocumentKey = UploadSlot["key"];
 
 export type UploadedDocument = {
   file: File;
@@ -113,30 +110,41 @@ export const LICENSE_CATEGORIES: LicenseCategory[] = [
   },
 ];
 
-export const REQUIRED_DOCUMENTS: {
+export type EnrollmentDocumentRow = {
   key: EnrollmentDocumentKey;
-  title: string;
+  label: string;
   description: string;
-}[] = [
-  {
-    key: "national_id",
-    title: "National ID",
-    description: "Official government issued identification",
-  },
-  {
-    key: "education_certificate",
-    title: "Educational Certificate",
-    description: "Grade 10 or 12 completion certificate",
-  },
-];
+  required: boolean;
+  acceptImages?: boolean;
+};
+
+const UPLOAD_SLOT_DESCRIPTIONS: Record<UploadSlot["key"], string> = {
+  profile_photo: "Recent passport-size photo of the student",
+  yellow_card: "Valid yellow health card document (optional)",
+  grade_8: "8th grade completion certificate",
+  grade_10: "10th grade completion certificate",
+  grade_12: "12th grade completion certificate",
+  medical: "Medical fitness certificate (optional)",
+};
+
+const OPTIONAL_UPLOAD_KEYS = new Set<UploadSlot["key"]>(["yellow_card", "medical"]);
+
+export const ENROLLMENT_DOCUMENT_ROWS: EnrollmentDocumentRow[] = UPLOAD_SLOTS.map(
+  (slot) => ({
+    key: slot.key as EnrollmentDocumentKey,
+    label: slot.label,
+    description: UPLOAD_SLOT_DESCRIPTIONS[slot.key as UploadSlot["key"]],
+    required: OPTIONAL_UPLOAD_KEYS.has(slot.key as UploadSlot["key"])
+      ? false
+      : slot.required,
+    acceptImages: slot.acceptImages,
+  }),
+);
 
 export const EMPTY_PROFILE: EnrollmentProfile = {
   firstNameEn: "",
   fatherNameEn: "",
   lastNameEn: "",
-  firstNameAm: "",
-  fatherNameAm: "",
-  lastNameAm: "",
   phone: "",
   dateOfBirthEc: "",
   bloodType: "",
@@ -146,9 +154,6 @@ export const EMPTY_PROFILE: EnrollmentProfile = {
   woreda: "",
   subcity: "",
   city: "",
-  studentId: "",
-  documentId: "",
-  verified: false,
   emergencyContactName: "",
   emergencyContactPhone: "",
 };

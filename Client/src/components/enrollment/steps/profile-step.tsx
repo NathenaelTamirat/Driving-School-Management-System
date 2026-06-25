@@ -72,7 +72,6 @@ function ProfileStepForm({
   });
 
   const watchedBloodType = watch("bloodType");
-  const watchedVerified = watch("verified");
 
   const onSubmit = (data: ProfileStepValues) => {
     updateProfile(data);
@@ -114,27 +113,6 @@ function ProfileStepForm({
               {...register("lastNameEn")}
               placeholder="e.g. Tadesse"
               className={fieldClass(errors.lastNameEn)}
-            />
-          </Field>
-          <Field label="First Name (Amharic)" error={errors.firstNameAm?.message} required>
-            <Input
-              {...register("firstNameAm")}
-              placeholder="e.g. አበበ"
-              className={fieldClass(errors.firstNameAm)}
-            />
-          </Field>
-          <Field label="Father's Name (Amharic)" error={errors.fatherNameAm?.message} required>
-            <Input
-              {...register("fatherNameAm")}
-              placeholder="e.g. ከበደ"
-              className={fieldClass(errors.fatherNameAm)}
-            />
-          </Field>
-          <Field label="Grandfather's Name (Amharic)" error={errors.lastNameAm?.message} required>
-            <Input
-              {...register("lastNameAm")}
-              placeholder="e.g. ታደሰ"
-              className={fieldClass(errors.lastNameAm)}
             />
           </Field>
 
@@ -230,43 +208,6 @@ function ProfileStepForm({
               placeholder="City or town"
               className={fieldClass(errors.city)}
             />
-          </Field>
-        </div>
-
-        <h2 className="mt-10 font-serif text-xl font-bold text-[#0f172a]">
-          Identification
-        </h2>
-
-        <div className="mt-6 grid gap-5 sm:grid-cols-2">
-          <Field label="Student ID" error={errors.studentId?.message} required>
-            <Input
-              {...register("studentId")}
-              placeholder="Student ID"
-              className={fieldClass(errors.studentId)}
-            />
-          </Field>
-          <Field label="Document ID" error={errors.documentId?.message} required>
-            <Input
-              {...register("documentId")}
-              placeholder="Document ID"
-              className={fieldClass(errors.documentId)}
-            />
-          </Field>
-          <Field label="Verification Status" error={errors.verified?.message}>
-            <Select
-              value={watchedVerified ? "true" : "false"}
-              onValueChange={(value) =>
-                setValue("verified", value === "true", { shouldValidate: true })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="false">Pending Verification</SelectItem>
-                <SelectItem value="true">Verified</SelectItem>
-              </SelectContent>
-            </Select>
           </Field>
         </div>
 
