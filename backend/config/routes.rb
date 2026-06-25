@@ -20,12 +20,12 @@ Rails.application.routes.draw do
       get    "auth/me",       to: "auth#me"
 
       # User management (admin-managed via UserPolicy)
-      resources :users, only: [:index, :show, :create, :update, :destroy]
+      resources :users, only: [ :index, :show, :create, :update, :destroy ]
 
-      resources :batches, only: [:index, :show, :create]
-      resources :license_categories, only: [:index]
-      resources :students, only: [:index, :show, :create] do
-        resources :exam_bookings, only: [:index, :show, :create, :update] do
+      resources :batches, only: [ :index, :show, :create ]
+      resources :license_categories, only: [ :index ]
+      resources :students, only: [ :index, :show, :create ] do
+        resources :exam_bookings, only: [ :index, :show, :create, :update ] do
           post :cancel, on: :member
           post :record_result, on: :member
         end

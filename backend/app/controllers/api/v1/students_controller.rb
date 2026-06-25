@@ -3,7 +3,7 @@
 module Api
   module V1
     class StudentsController < ApplicationController
-      before_action :set_student, only: [:show]
+      before_action :set_student, only: [ :show ]
 
       # GET /api/v1/students
       def index
@@ -37,7 +37,7 @@ module Api
       def set_student
         @student = Student.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Student not found' }, status: :not_found
+        render json: { error: "Student not found" }, status: :not_found
       end
 
       def student_params

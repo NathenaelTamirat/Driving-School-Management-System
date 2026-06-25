@@ -14,14 +14,14 @@ module Meklit
     # Execute the complete batch export process
     # Returns a hash with success status and any errors
     def call
-      return error_result('Batch already submitted') if batch.submitted?
-      return error_result('Batch already approved') if batch.approved?
+      return error_result("Batch already submitted") if batch.submitted?
+      return error_result("Batch already approved") if batch.approved?
 
       logger.info "[BatchingService] Starting batch export for batch #{batch.id}"
 
       # Step 1: Validate all students in batch
       unless validate_students
-        return error_result('Student validation failed')
+        return error_result("Student validation failed")
       end
 
       # Step 2: Generate payload
@@ -35,7 +35,7 @@ module Meklit
       end
 
       # Step 4: Update batch status
-      batch.update!(status: 'submitted', submitted_at: Time.current)
+      batch.update!(status: "submitted", submitted_at: Time.current)
       logger.info "[BatchingService] Batch #{batch.id} successfully submitted to ERTA"
 
       # Step 5: Send submission notification email
@@ -94,7 +94,7 @@ module Meklit
 
     # Send batch submission notification email
     def send_submission_email
-      admin_email = ENV['ADMIN_EMAIL'] || 'admin@drivingschool.et'
+      admin_email = ENV["ADMIN_EMAIL"] || "admin@drivingschool.et"
       MeklitMailer.batch_submission(batch, admin_email).deliver_later
       logger.info "[BatchingService] Submission email sent for batch #{batch.id}"
     rescue StandardError => e

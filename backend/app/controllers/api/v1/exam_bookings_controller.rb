@@ -74,13 +74,13 @@ module Api
       def set_student
         @student = Student.find(params[:student_id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Student not found' }, status: :not_found
+        render json: { error: "Student not found" }, status: :not_found
       end
 
       def set_exam_booking
         @exam_booking = @student.exam_bookings.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Exam booking not found' }, status: :not_found
+        render json: { error: "Exam booking not found" }, status: :not_found
       end
 
       def exam_booking_params

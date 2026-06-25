@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class MeklitMailer < ApplicationMailer
-  default from: ENV['MAILER_FROM'] || 'noreply@drivingschool.et'
+  default from: ENV["MAILER_FROM"] || "noreply@drivingschool.et"
 
   # Send email when a batch is submitted to ERTA
   def batch_submission(batch, recipient_email)

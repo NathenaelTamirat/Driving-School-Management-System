@@ -24,54 +24,54 @@ class ExamBooking < ApplicationRecord
     completed? && score.present? && score < PASSING_SCORE
   end
 
-  scope :scheduled, -> { where(status: 'scheduled') }
-  scope :completed, -> { where(status: 'completed') }
-  scope :upcoming, -> { where('scheduled_date >= ?', Time.current) }
-  scope :past, -> { where('scheduled_date < ?', Time.current) }
+  scope :scheduled, -> { where(status: "scheduled") }
+  scope :completed, -> { where(status: "completed") }
+  scope :upcoming, -> { where("scheduled_date >= ?", Time.current) }
+  scope :past, -> { where("scheduled_date < ?", Time.current) }
 
   # Status helper methods
   def scheduled?
-    status == 'scheduled'
+    status == "scheduled"
   end
 
   def completed?
-    status == 'completed'
+    status == "completed"
   end
 
   def cancelled?
-    status == 'cancelled'
+    status == "cancelled"
   end
 
   def no_show?
-    status == 'no_show'
+    status == "no_show"
   end
 
   # Mark exam as completed with score
   def complete!(score, notes = nil)
-    update!(status: 'completed', score: score, notes: notes, completed_at: Time.current)
+    update!(status: "completed", score: score, notes: notes, completed_at: Time.current)
   end
 
   # Cancel the exam booking
   def cancel!
-    update!(status: 'cancelled')
+    update!(status: "cancelled")
   end
 
   # Mark as no-show
   def mark_no_show!
-    update!(status: 'no_show')
+    update!(status: "no_show")
   end
 
   private
 
   def scheduled_date_must_be_in_future
     if scheduled_date.present? && scheduled_date < Time.current
-      errors.add(:scheduled_date, 'must be in the future')
+      errors.add(:scheduled_date, "must be in the future")
     end
   end
 
   def score_required_if_completed
     if completed? && score.nil?
-      errors.add(:score, 'is required when exam is completed')
+      errors.add(:score, "is required when exam is completed")
     end
   end
 end

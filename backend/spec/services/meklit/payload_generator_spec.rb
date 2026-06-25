@@ -8,7 +8,7 @@ RSpec.describe Meklit::PayloadGenerator, type: :service do
   let(:student2) { create(:student, batch: batch, student_id: 'STU002', document_id: 'DOC002') }
 
   before do
-    batch.students << [student1, student2]
+    batch.students << [ student1, student2 ]
   end
 
   describe '#generate' do

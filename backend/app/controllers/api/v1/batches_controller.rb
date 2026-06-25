@@ -3,7 +3,7 @@
 module Api
   module V1
     class BatchesController < ApplicationController
-      before_action :set_batch, only: [:show]
+      before_action :set_batch, only: [ :show ]
 
       # GET /api/v1/batches
       def index
@@ -32,7 +32,7 @@ module Api
       def set_batch
         @batch = Batch.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Batch not found' }, status: :not_found
+        render json: { error: "Batch not found" }, status: :not_found
       end
 
       def batch_params

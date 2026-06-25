@@ -27,7 +27,7 @@ module Meklit
 
     # Generate XML format payload
     def to_xml
-      generate.to_xml(root: 'ERTASubmission', dasherize: false)
+      generate.to_xml(root: "ERTASubmission", dasherize: false)
     end
 
     # Generate JSON format payload

@@ -18,11 +18,11 @@ module Meklit
       return false unless response_data_valid?
 
       case response_data[:status]
-      when 'approved'
+      when "approved"
         handle_approval
-      when 'rejected'
+      when "rejected"
         handle_rejection
-      when 'partial'
+      when "partial"
         handle_partial_approval
       else
         logger.error "[ResponseHandler] Unknown response status: #{response_data[:status]}"
@@ -50,13 +50,13 @@ module Meklit
     # Handle batch approval
     def handle_approval
       batch.update!(
-        status: 'approved',
+        status: "approved",
         approved_at: Time.current,
         rejection_reason: nil
       )
 
       # Update all students in batch to graduated status
-      batch.students.update_all(status: 'graduated')
+      batch.students.update_all(status: "graduated")
 
       # Send approval notification emails
       send_batch_approval_emails
@@ -70,15 +70,15 @@ module Meklit
 
     # Handle batch rejection
     def handle_rejection
-      rejection_reason = response_data[:reason] || 'No reason provided'
+      rejection_reason = response_data[:reason] || "No reason provided"
 
       batch.update!(
-        status: 'rejected',
+        status: "rejected",
         rejection_reason: rejection_reason
       )
 
       # Optionally update student statuses back to exam_eligible
-      batch.students.update_all(status: 'exam_eligible')
+      batch.students.update_all(status: "exam_eligible")
 
       logger.warn "[ResponseHandler] Batch #{batch.id} rejected by ERTA: #{rejection_reason}"
       true
@@ -90,9 +90,9 @@ module Meklit
     # Handle partial approval (some students approved, some rejected)
     def handle_partial_approval
       batch.update!(
-        status: 'approved',
+        status: "approved",
         approved_at: Time.current,
-        rejection_reason: 'Partial approval - see individual student responses'
+        rejection_reason: "Partial approval - see individual student responses"
       )
 
       # Process individual student responses
@@ -111,11 +111,11 @@ module Meklit
         student = batch.students.find_by(student_id: student_response[:student_id])
         next unless student
 
-        if student_response[:status] == 'approved'
-          student.update!(status: 'graduated')
+        if student_response[:status] == "approved"
+          student.update!(status: "graduated")
           logger.info "[ResponseHandler] Student #{student.student_id} approved"
         else
-          student.update!(status: 'exam_eligible')
+          student.update!(status: "exam_eligible")
           logger.warn "[ResponseHandler] Student #{student.student_id} rejected: #{student_response[:reason]}"
         end
       end
@@ -124,7 +124,7 @@ module Meklit
     # Send batch approval emails to admin and students
     def send_batch_approval_emails
       # Send to admin
-      admin_email = ENV['ADMIN_EMAIL'] || 'admin@drivingschool.et'
+      admin_email = ENV["ADMIN_EMAIL"] || "admin@drivingschool.et"
       MeklitMailer.batch_approval(batch, admin_email).deliver_later
 
       # Send to individual students

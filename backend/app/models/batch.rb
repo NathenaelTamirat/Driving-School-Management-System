@@ -6,18 +6,18 @@ class Batch < ApplicationRecord
 
   # Status helper methods
   def pending?
-    status == 'pending'
+    status == "pending"
   end
 
   def submitted?
-    status == 'submitted'
+    status == "submitted"
   end
 
   def approved?
-    status == 'approved'
+    status == "approved"
   end
 
   def rejected?
-    status == 'rejected'
+    status == "rejected"
   end
 end

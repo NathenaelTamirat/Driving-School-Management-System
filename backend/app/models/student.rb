@@ -24,7 +24,7 @@ class Student < ApplicationRecord
 
   # Helper method for exam eligibility check
   def exam_eligible?
-    status == 'exam_eligible'
+    status == "exam_eligible"
   end
 
   # Check if student is currently under penalty
@@ -47,7 +47,7 @@ class Student < ApplicationRecord
       # Guard: theory_days >= 35 AND mock_test_score > 37
       transitions from: :theory_in_progress, to: :practical_in_progress,
                   guard: :can_start_practical?
-      
+
       after do
         # Placeholder for Finance::MilestoneTracker integration
         # Rails.logger.info "Triggering Milestone 2 invoice for Student #{id}"
