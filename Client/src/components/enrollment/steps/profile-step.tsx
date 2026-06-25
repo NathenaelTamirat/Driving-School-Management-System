@@ -272,5 +272,5 @@ function Field({
 }
 
 function fieldClass(error: unknown) {
-  return cn(error && "border-red-500");
+  return cn(Boolean(error) && "border-red-500");
 }

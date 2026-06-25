@@ -102,3 +102,90 @@ export async function createStudentFromEnrollment(
     : mapEnrollmentToStudentPayload(state);
   return createStudent(payload);
 }
+
+export async function getStudents(): Promise<ApiResponse<Student[]>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/students`);
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Failed to fetch students" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+export async function getStudent(id: number): Promise<ApiResponse<Student>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}`);
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Student not found" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+export async function getBatches(): Promise<ApiResponse<Batch[]>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/batches`);
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Failed to fetch batches" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+export async function updateStudent(
+  id: number,
+  data: Record<string, unknown>,
+): Promise<ApiResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student: data }),
+    });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Failed to update student", errors: json.errors };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+export type Student = {
+  id: number;
+  batch_id: number;
+  student_id: string;
+  document_id: string;
+  first_name: string;
+  middle_name: string;
+  last_name: string;
+  date_of_birth: string;
+  blood_type: string;
+  address: string;
+  house_number: string;
+  kebele: string | null;
+  woreda: string;
+  subcity: string | null;
+  city: string;
+  status: string;
+  verified: boolean;
+  verified_at: string | null;
+  theory_days_completed: number;
+  practical_days_completed: number;
+  mock_test_score: number;
+  under_penalty: boolean;
+  penalty_start_date: string | null;
+  penalty_end_date: string | null;
+  penalty_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Batch = {
+  id: number;
+  name: string;
+  status: string;
+};
