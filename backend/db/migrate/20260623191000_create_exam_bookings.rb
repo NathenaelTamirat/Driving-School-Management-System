@@ -13,7 +13,8 @@ class CreateExamBookings < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :exam_bookings, :student_id
+    # Note: t.belongs_to :student above already creates index_exam_bookings_on_student_id,
+    # so we do not add it again here (doing so raises PG::DuplicateTable).
     add_index :exam_bookings, :scheduled_date
     add_index :exam_bookings, :status
   end
