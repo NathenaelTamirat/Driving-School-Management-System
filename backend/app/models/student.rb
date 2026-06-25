@@ -2,7 +2,10 @@ class Student < ApplicationRecord
   include AASM
 
   belongs_to :batch
-  has_many :exam_bookings, dependent: :destroy
+  has_many :exam_bookings,   dependent: :destroy
+  has_many :attendance_logs, dependent: :destroy
+  has_many :mock_tests,      dependent: :destroy
+  has_one  :graduation_record, dependent: :destroy
 
   validates :status, presence: true
   validates :student_id, presence: true, uniqueness: true
