@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Driving School Management System",
-  description: "Admin panel for managing driving school students",
+  title: "DSAS — Driving School Admin",
+  description: "Driving School Administration System",
 };
 
 export default function RootLayout({
