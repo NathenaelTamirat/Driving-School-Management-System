@@ -16,11 +16,220 @@
 
 ---
 
+### Authentication
+
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| `POST` | `/api/v1/auth/login` | Log in with email/password, returns JWT | No |
+| `POST` | `/api/v1/auth/register` | Self-register as `student` role, returns JWT | No |
+| `DELETE` | `/api/v1/auth/logout` | Log out (token added to denylist) | Yes |
+| `GET` | `/api/v1/auth/me` | Get current authenticated user's profile | Yes |
+
+**Auth Required** endpoints must include an `Authorization: Bearer <token>` header. Responses from auth-required endpoints use a standardized envelope:
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Login successful"
+}
+```
+
+On error:
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Invalid email or password",
+    "code": "INVALID_CREDENTIALS"
+  }
+}
+```
+
+#### `POST /api/v1/auth/login`
+
+**Parameters (`auth`):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `auth[email]` | string | yes | User's email |
+| `auth[password]` | string | yes | User's password |
+
+**Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": 1,
+      "email": "john@example.com",
+      "full_name": "John Doe",
+      "role": "student",
+      "phone_number": "+251911111111",
+      "is_qualified_instructor": false,
+      "created_at": "2026-06-25T10:00:00Z"
+    },
+    "token": "eyJhbGciOiJIUzI1NiJ9..."
+  },
+  "message": "Login successful"
+}
+```
+
+**Response `401 Unauthorized`:**
+```json
+{
+  "success": false,
+  "error": { "message": "Invalid email or password", "code": "INVALID_CREDENTIALS" }
+}
+```
+
+#### `POST /api/v1/auth/register`
+
+**Parameters (`auth`):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `auth[email]` | string | yes | User's email |
+| `auth[password]` | string | yes | Min 6 chars |
+| `auth[password_confirmation]` | string | yes | Must match password |
+| `auth[full_name]` | string | yes | Full name |
+| `auth[phone_number]` | string | no | Phone number |
+
+**Response `201 Created`:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": { "id": 1, "email": "john@example.com", "full_name": "John Doe", "role": "student", "phone_number": null, "is_qualified_instructor": false, "created_at": "2026-06-25T10:00:00Z" },
+    "token": "eyJhbGciOiJIUzI1NiJ9..."
+  },
+  "message": "Registration successful"
+}
+```
+
+**Response `422 Unprocessable Entity`:**
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Registration failed",
+    "code": "REGISTRATION_FAILED",
+    "details": { "email": ["has already been taken"], "password": ["is too short (minimum is 6 characters)"] }
+  }
+}
+```
+
+#### `DELETE /api/v1/auth/logout`
+
+Requires `Authorization: Bearer <token>` header. No request body needed.
+
+**Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Logout successful"
+}
+```
+
+#### `GET /api/v1/auth/me`
+
+Requires `Authorization: Bearer <token>` header.
+
+**Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": { "id": 1, "email": "john@example.com", "full_name": "John Doe", "role": "student", "phone_number": "+251911111111", "is_qualified_instructor": false, "created_at": "2026-06-25T10:00:00Z" }
+  },
+  "message": "Current user retrieved"
+}
+```
+
+---
+
+### Users (Admin-managed)
+
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| `GET` | `/api/v1/users` | List all users (admin only) | Yes |
+| `GET` | `/api/v1/users/:id` | Show a user (admin or self) | Yes |
+| `POST` | `/api/v1/users` | Create a user with any role (admin only) | Yes |
+| `PATCH` | `/api/v1/users/:id` | Update a user (admin or self) | Yes |
+| `DELETE` | `/api/v1/users/:id` | Delete a user (admin only, cannot delete self) | Yes |
+
+All Users endpoints require `Authorization: Bearer <token>` header and admin role (except show/update for own profile).
+
+#### `POST /api/v1/users` — Create User
+
+**Parameters (`user`):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `user[email]` | string | yes | User's email |
+| `user[password]` | string | yes | Min 6 chars |
+| `user[password_confirmation]` | string | yes | Must match password |
+| `user[full_name]` | string | yes | Full name |
+| `user[role]` | string | yes | One of: `admin`, `instructor`, `clerk`, `student` |
+| `user[phone_number]` | string | no | Phone number |
+| `user[instructor_license_number]` | string | no | Required if role is `instructor` |
+| `user[instructor_category]` | string | no | Instructor's category |
+| `user[years_experience]` | integer | no | >= 0 |
+| `user[is_qualified_instructor]` | boolean | no | Default: `false` |
+
+**Response `201 Created`:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "email": "instructor@example.com",
+    "full_name": "Jane Instructor",
+    "role": "instructor",
+    "phone_number": "+251911111111",
+    "is_qualified_instructor": true,
+    "created_at": "2026-06-25T10:00:00Z"
+  },
+  "message": "User created"
+}
+```
+
+#### `PATCH /api/v1/users/:id` — Update User
+
+Same parameters as create (partial update allowed). Use `PATCH`.
+
+**Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": { "id": 1, "email": "updated@example.com", ... },
+  "message": "User updated"
+}
+```
+
+#### `DELETE /api/v1/users/:id`
+
+**Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "User deleted"
+}
+```
+
+---
+
 ### Batches
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/v1/batches` | List all batches |
+| `GET` | `/api/v1/batches/:id` | Show a single batch |
+| `POST` | `/api/v1/batches` | Create a new batch |
+
+#### `GET /api/v1/batches`
 
 **Response `200 OK`:**
 ```json
@@ -28,9 +237,60 @@
   {
     "id": 1,
     "name": "Batch A",
-    "status": "pending"
+    "status": "pending",
+    "submitted_at": null,
+    "approved_at": null,
+    "rejection_reason": null,
+    "created_at": "2026-06-25T10:00:00Z",
+    "updated_at": "2026-06-25T10:00:00Z"
   }
 ]
+```
+
+#### `GET /api/v1/batches/:id`
+
+**Response `200 OK`:**
+```json
+{
+  "id": 1,
+  "name": "Batch A",
+  "status": "pending",
+  "submitted_at": null,
+  "approved_at": null,
+  "rejection_reason": null,
+  "created_at": "2026-06-25T10:00:00Z",
+  "updated_at": "2026-06-25T10:00:00Z"
+}
+```
+
+#### `POST /api/v1/batches`
+
+**Parameters (`batch`):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `batch[name]` | string | yes | Batch name |
+| `batch[status]` | string | no | One of: `pending`, `submitted`, `approved`, `rejected` (default: `pending`) |
+
+**Response `201 Created`:**
+```json
+{
+  "id": 2,
+  "name": "Batch B",
+  "status": "pending",
+  "submitted_at": null,
+  "approved_at": null,
+  "rejection_reason": null,
+  "created_at": "2026-06-25T12:00:00Z",
+  "updated_at": "2026-06-25T12:00:00Z"
+}
+```
+
+**Response `422 Unprocessable Entity`:**
+```json
+{
+  "errors": ["Name can't be blank", "Name has already been taken"]
+}
 ```
 
 **Batch statuses:** `pending`, `submitted`, `approved`, `rejected`
@@ -323,9 +583,11 @@ registered ──> theory_in_progress ──> practical_in_progress ──> exam
 
 | Status | Meaning |
 |--------|---------|
-| `404` | Resource not found — `{ "error": "Student not found" }` |
-| `422` | Validation failure — `{ "errors": ["..."] }` |
-| `403` | Eligibility check failed — `{ "errors": ["..."] }` |
+| `400` | Missing required parameter — `{ "success": false, "error": { "message": "...", "code": "PARAMETER_MISSING" } }` |
+| `401` | Unauthorized / invalid credentials — `{ "success": false, "error": { "message": "...", "code": "INVALID_CREDENTIALS" } }` |
+| `403` | Forbidden / eligibility check failed / not authorized |
+| `404` | Resource not found — `{ "error": "Student not found" }` or `{ "success": false, "error": { "message": "Resource not found", "code": "NOT_FOUND" } }` |
+| `422` | Validation failure — `{ "errors": ["..."] }` or `{ "success": false, "error": { "message": "...", "code": "VALIDATION_ERROR" } }` |
 
 ---
 

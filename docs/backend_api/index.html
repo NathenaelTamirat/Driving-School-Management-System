@@ -309,9 +309,11 @@ code .hljs-built_in { color: #67e8f9; }
     <div class="nav-group">
       <div class="nav-group-title">Resources</div>
       <a href="#overview">Overview</a>
-      <a href="#batches"><span class="method-badge-sm badge-get">GET</span> Batches</a>
+      <a href="#auth">Authentication</a>
+      <a href="#users">Users</a>
+      <a href="#batches">Batches</a>
       <a href="#license-categories"><span class="method-badge-sm badge-get">GET</span> License Categories</a>
-      <a href="#students"><span class="method-badge-sm badge-get">GET</span> Students</a>
+      <a href="#students">Students</a>
       <a href="#student-create"><span class="method-badge-sm badge-post">POST</span> Create Student</a>
       <a href="#exam-bookings">Exam Bookings</a>
       <a href="#exam-booking-cancel"><span class="method-badge-sm badge-post">POST</span> Cancel Booking</a>
@@ -351,6 +353,213 @@ code .hljs-built_in { color: #67e8f9; }
     </div>
   </div>
 
+  <!-- Authentication -->
+  <h2 id="auth">Authentication</h2>
+  <div class="endpoint-card">
+    <div class="endpoint-row">
+      <span class="method method-post">POST</span>
+      <span class="path">/api/v1/auth/login</span>
+      <span class="desc">Log in with email/password, returns JWT</span>
+    </div>
+    <div class="endpoint-row">
+      <span class="method method-post">POST</span>
+      <span class="path">/api/v1/auth/register</span>
+      <span class="desc">Self-register as student role, returns JWT</span>
+    </div>
+    <div class="endpoint-row">
+      <span class="method method-delete">DELETE</span>
+      <span class="path">/api/v1/auth/logout</span>
+      <span class="desc">Log out (token added to denylist)</span>
+    </div>
+    <div class="endpoint-row">
+      <span class="method method-get">GET</span>
+      <span class="path">/api/v1/auth/me</span>
+      <span class="desc">Get current authenticated user's profile</span>
+    </div>
+  </div>
+  <p>Auth-required endpoints need an <code>Authorization: Bearer &lt;token&gt;</code> header. All auth endpoints return a standardized envelope:</p>
+  <pre><code>{
+  "success": true,
+  "data": { ... },
+  "message": "Login successful"
+}</code></pre>
+
+  <h3 id="auth-login">Login</h3>
+  <p><code>POST /api/v1/auth/login</code></p>
+  <h4>Parameters (<code>auth</code>)</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Req</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>auth[email]</td><td>string</td><td>yes</td><td>User's email</td></tr>
+        <tr><td>auth[password]</td><td>string</td><td>yes</td><td>User's password</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(52,211,153,.15);color:var(--green);">200 OK</span></h4>
+  <pre><code>{
+  "success": true,
+  "data": {
+    "user": {
+      "id": 1,
+      "email": "john@example.com",
+      "full_name": "John Doe",
+      "role": "student",
+      "phone_number": "+251911111111",
+      "is_qualified_instructor": false,
+      "created_at": "2026-06-25T10:00:00Z"
+    },
+    "token": "eyJhbGciOiJIUzI1NiJ9..."
+  },
+  "message": "Login successful"
+}</code></pre>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(248,113,113,.15);color:var(--red);">401 Unauthorized</span></h4>
+  <pre><code>{
+  "success": false,
+  "error": { "message": "Invalid email or password", "code": "INVALID_CREDENTIALS" }
+}</code></pre>
+
+  <h3 id="auth-register">Register</h3>
+  <p><code>POST /api/v1/auth/register</code></p>
+  <h4>Parameters (<code>auth</code>)</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Req</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>auth[email]</td><td>string</td><td>yes</td><td>User's email</td></tr>
+        <tr><td>auth[password]</td><td>string</td><td>yes</td><td>Min 6 chars</td></tr>
+        <tr><td>auth[password_confirmation]</td><td>string</td><td>yes</td><td>Must match password</td></tr>
+        <tr><td>auth[full_name]</td><td>string</td><td>yes</td><td>Full name</td></tr>
+        <tr><td>auth[phone_number]</td><td>string</td><td>no</td><td>Phone number</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(52,211,153,.15);color:var(--green);">201 Created</span></h4>
+  <pre><code>{
+  "success": true,
+  "data": {
+    "user": { "id": 1, "email": "john@example.com", "full_name": "John Doe", "role": "student", "phone_number": null, "is_qualified_instructor": false, "created_at": "2026-06-25T10:00:00Z" },
+    "token": "eyJhbGciOiJIUzI1NiJ9..."
+  },
+  "message": "Registration successful"
+}</code></pre>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(248,113,113,.15);color:var(--red);">422 Unprocessable Entity</span></h4>
+  <pre><code>{
+  "success": false,
+  "error": {
+    "message": "Registration failed",
+    "code": "REGISTRATION_FAILED",
+    "details": { "email": ["has already been taken"] }
+  }
+}</code></pre>
+
+  <h3 id="auth-logout">Logout</h3>
+  <p><code>DELETE /api/v1/auth/logout</code></p>
+  <p>Requires <code>Authorization: Bearer &lt;token&gt;</code> header. No request body needed.</p>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(52,211,153,.15);color:var(--green);">200 OK</span></h4>
+  <pre><code>{
+  "success": true,
+  "data": {},
+  "message": "Logout successful"
+}</code></pre>
+
+  <h3 id="auth-me">Current User</h3>
+  <p><code>GET /api/v1/auth/me</code></p>
+  <p>Requires <code>Authorization: Bearer &lt;token&gt;</code> header.</p>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(52,211,153,.15);color:var(--green);">200 OK</span></h4>
+  <pre><code>{
+  "success": true,
+  "data": {
+    "user": { "id": 1, "email": "john@example.com", "full_name": "John Doe", "role": "student", "phone_number": "+251911111111", "is_qualified_instructor": false, "created_at": "2026-06-25T10:00:00Z" }
+  },
+  "message": "Current user retrieved"
+}</code></pre>
+
+  <!-- Users -->
+  <h2 id="users">Users (Admin-managed)</h2>
+  <div class="endpoint-card">
+    <div class="endpoint-row">
+      <span class="method method-get">GET</span>
+      <span class="path">/api/v1/users</span>
+      <span class="desc">List all users (admin only)</span>
+    </div>
+    <div class="endpoint-row">
+      <span class="method method-get">GET</span>
+      <span class="path">/api/v1/users/:id</span>
+      <span class="desc">Show a user (admin or self)</span>
+    </div>
+    <div class="endpoint-row">
+      <span class="method method-post">POST</span>
+      <span class="path">/api/v1/users</span>
+      <span class="desc">Create a user with any role (admin only)</span>
+    </div>
+    <div class="endpoint-row">
+      <span class="method method-patch">PATCH</span>
+      <span class="path">/api/v1/users/:id</span>
+      <span class="desc">Update a user (admin or self)</span>
+    </div>
+    <div class="endpoint-row">
+      <span class="method method-delete">DELETE</span>
+      <span class="path">/api/v1/users/:id</span>
+      <span class="desc">Delete a user (admin only, cannot delete self)</span>
+    </div>
+  </div>
+  <p>All Users endpoints require <code>Authorization: Bearer &lt;token&gt;</code> and admin role (except show/update for own profile).</p>
+
+  <h3 id="user-create">Create User</h3>
+  <p><code>POST /api/v1/users</code></p>
+  <h4>Parameters (<code>user</code>)</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Req</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>user[email]</td><td>string</td><td>yes</td><td>User's email</td></tr>
+        <tr><td>user[password]</td><td>string</td><td>yes</td><td>Min 6 chars</td></tr>
+        <tr><td>user[password_confirmation]</td><td>string</td><td>yes</td><td>Must match password</td></tr>
+        <tr><td>user[full_name]</td><td>string</td><td>yes</td><td>Full name</td></tr>
+        <tr><td>user[role]</td><td>string</td><td>yes</td><td>admin / instructor / clerk / student</td></tr>
+        <tr><td>user[phone_number]</td><td>string</td><td>no</td><td>Phone number</td></tr>
+        <tr><td>user[instructor_license_number]</td><td>string</td><td>no</td><td>Required if role is instructor</td></tr>
+        <tr><td>user[instructor_category]</td><td>string</td><td>no</td><td>Instructor's category</td></tr>
+        <tr><td>user[years_experience]</td><td>integer</td><td>no</td><td>&gt;= 0</td></tr>
+        <tr><td>user[is_qualified_instructor]</td><td>boolean</td><td>no</td><td>Default: false</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(52,211,153,.15);color:var(--green);">201 Created</span></h4>
+  <pre><code>{
+  "success": true,
+  "data": {
+    "id": 1,
+    "email": "instructor@example.com",
+    "full_name": "Jane Instructor",
+    "role": "instructor",
+    "phone_number": "+251911111111",
+    "is_qualified_instructor": true,
+    "created_at": "2026-06-25T10:00:00Z"
+  },
+  "message": "User created"
+}</code></pre>
+
+  <h3 id="user-update">Update User</h3>
+  <p><code>PATCH /api/v1/users/:id</code></p>
+  <p>Same parameters as create (partial update allowed).</p>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(52,211,153,.15);color:var(--green);">200 OK</span></h4>
+  <pre><code>{
+  "success": true,
+  "data": { "id": 1, "email": "updated@example.com", ... },
+  "message": "User updated"
+}</code></pre>
+
+  <h3 id="user-delete">Delete User</h3>
+  <p><code>DELETE /api/v1/users/:id</code></p>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(52,211,153,.15);color:var(--green);">200 OK</span></h4>
+  <pre><code>{
+  "success": true,
+  "data": {},
+  "message": "User deleted"
+}</code></pre>
+
   <!-- Batches -->
   <h2 id="batches">Batches</h2>
   <div class="endpoint-card">
@@ -359,11 +568,51 @@ code .hljs-built_in { color: #67e8f9; }
       <span class="path">/api/v1/batches</span>
       <span class="desc">List all batches</span>
     </div>
+    <div class="endpoint-row">
+      <span class="method method-get">GET</span>
+      <span class="path">/api/v1/batches/:id</span>
+      <span class="desc">Show a single batch</span>
+    </div>
+    <div class="endpoint-row">
+      <span class="method method-post">POST</span>
+      <span class="path">/api/v1/batches</span>
+      <span class="desc">Create a new batch</span>
+    </div>
   </div>
   <p>Status values: <code>pending</code>, <code>submitted</code>, <code>approved</code>, <code>rejected</code></p>
+
+  <h3 id="batch-list">List Batches</h3>
+  <p><code>GET /api/v1/batches</code></p>
   <pre><code>[
-  { "id": 1, "name": "Batch A", "status": "pending" }
+  { "id": 1, "name": "Batch A", "status": "pending", "submitted_at": null, "approved_at": null, "rejection_reason": null, "created_at": "2026-06-25T10:00:00Z", "updated_at": "2026-06-25T10:00:00Z" }
 ]</code></pre>
+
+  <h3 id="batch-show">Show Batch</h3>
+  <p><code>GET /api/v1/batches/:id</code></p>
+  <pre><code>{
+  "id": 1, "name": "Batch A", "status": "pending", "submitted_at": null, "approved_at": null, "rejection_reason": null, "created_at": "2026-06-25T10:00:00Z", "updated_at": "2026-06-25T10:00:00Z"
+}</code></pre>
+
+  <h3 id="batch-create">Create Batch</h3>
+  <p><code>POST /api/v1/batches</code></p>
+  <h4>Parameters (<code>batch</code>)</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Req</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>batch[name]</td><td>string</td><td>yes</td><td>Batch name</td></tr>
+        <tr><td>batch[status]</td><td>string</td><td>no</td><td>pending / submitted / approved / rejected</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(96,165,250,.15);color:var(--blue);">201 Created</span></h4>
+  <pre><code>{
+  "id": 2, "name": "Batch B", "status": "pending", "submitted_at": null, "approved_at": null, "rejection_reason": null, "created_at": "2026-06-25T12:00:00Z", "updated_at": "2026-06-25T12:00:00Z"
+}</code></pre>
+  <h4>Response &mdash; <span class="badge" style="background:rgba(248,113,113,.15);color:var(--red);">422 Unprocessable Entity</span></h4>
+  <pre><code>{
+  "errors": ["Name can't be blank", "Name has already been taken"]
+}</code></pre>
 
   <!-- License Categories -->
   <h2 id="license-categories">License Categories</h2>
@@ -702,9 +951,11 @@ code .hljs-built_in { color: #67e8f9; }
     <table>
       <thead><tr><th>Status</th><th>Body</th><th>When</th></tr></thead>
       <tbody>
-        <tr><td><span class="badge" style="background:rgba(96,165,250,.15);color:var(--blue);">404</span></td><td><code>{ "error": "Student not found" }</code></td><td>Resource not found</td></tr>
+        <tr><td><span class="badge" style="background:rgba(251,191,36,.15);color:var(--yellow);">400</span></td><td><code>{ "success": false, "error": { "message": "...", "code": "PARAMETER_MISSING" } }</code></td><td>Missing required parameter</td></tr>
+        <tr><td><span class="badge" style="background:rgba(248,113,113,.15);color:var(--red);">401</span></td><td><code>{ "success": false, "error": { "message": "...", "code": "INVALID_CREDENTIALS" } }</code></td><td>Unauthorized / invalid credentials</td></tr>
+        <tr><td><span class="badge" style="background:rgba(251,191,36,.15);color:var(--yellow);">403</span></td><td><code>{ "errors": ["..."] }</code></td><td>Forbidden / eligibility check failed</td></tr>
+        <tr><td><span class="badge" style="background:rgba(96,165,250,.15);color:var(--blue);">404</span></td><td><code>{ "error": "Resource not found" }</code></td><td>Resource not found</td></tr>
         <tr><td><span class="badge" style="background:rgba(248,113,113,.15);color:var(--red);">422</span></td><td><code>{ "errors": ["..."] }</code></td><td>Validation failure</td></tr>
-        <tr><td><span class="badge" style="background:rgba(251,191,36,.15);color:var(--yellow);">403</span></td><td><code>{ "errors": ["..."] }</code></td><td>Eligibility check failed</td></tr>
       </tbody>
     </table>
   </div>
