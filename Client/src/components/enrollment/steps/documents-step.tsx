@@ -163,7 +163,6 @@ function DocumentRow({
   onRemove: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const Icon = getRowIcon(row.key);
 
   const accept = row.acceptImages
     ? "image/jpeg,image/png,image/webp,image/heic,image/heif"
@@ -172,7 +171,7 @@ function DocumentRow({
   return (
     <li className="flex flex-wrap items-center gap-3 py-4 sm:gap-4">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-        <Icon className="h-5 w-5" />
+        {getRowIcon(row.key, "h-5 w-5")}
       </div>
 
       <div className="min-w-0 flex-1">
@@ -245,20 +244,23 @@ function DocumentRow({
   );
 }
 
-function getRowIcon(key: EnrollmentDocumentKey) {
+// Returns a rendered icon element (not a component type) so callers don't alias
+// it to a capitalized local and render <Icon/> during render, which trips the
+// react-hooks/static-components rule.
+function getRowIcon(key: EnrollmentDocumentKey, className?: string) {
   switch (key) {
     case "profile_photo":
-      return ImageIcon;
+      return <ImageIcon className={className} />;
     case "yellow_card":
-      return FileText;
+      return <FileText className={className} />;
     case "grade_8":
     case "grade_10":
     case "grade_12":
-      return GraduationCap;
+      return <GraduationCap className={className} />;
     case "medical":
-      return Stethoscope;
+      return <Stethoscope className={className} />;
     default:
-      return FileText;
+      return <FileText className={className} />;
   }
 }
 
