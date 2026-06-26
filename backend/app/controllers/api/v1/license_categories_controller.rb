@@ -2,10 +2,10 @@
 
 module Api
   module V1
-    # Public controller returning hardcoded Ethiopian license categories.
-    # Each category (B, C, D, A) includes ETB pricing, age requirements,
-    # and mandated training hours. Matches the ERTA classification system.
-    class LicenseCategoriesController < ApplicationController
+    # Authenticated controller returning hardcoded Ethiopian license categories.
+    # Requires a valid JWT. Each category (B, C, D, A) includes ETB pricing,
+    # age requirements, and mandated training hours.
+    class LicenseCategoriesController < BaseController
       # GET /api/v1/license_categories
       def index
         # Hardcoded license categories and pricing

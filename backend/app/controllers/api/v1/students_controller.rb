@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class StudentsController < ApplicationController
+    class StudentsController < BaseController
       before_action :set_student, only: [ :show ]
 
       # GET /api/v1/students
