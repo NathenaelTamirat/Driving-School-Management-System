@@ -1,0 +1,25 @@
+#!/bin/bash
+# post-deploy — run after each Kamal deploy
+# Scheduled database backup via pg_dump inside the running container.
+#
+# To enable, uncomment the pg_dump line below and set BACKUP_S3_BUCKET.
+#
+# Requires: pg_dump installed in the container, AWS CLI or rclone for upload.
+
+set -e
+
+if [ -n "$BACKUP_S3_BUCKET" ]; then
+  TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
+  BACKUP_FILE="/tmp/db_backup_${TIMESTAMP}.sql.gz"
+
+  pg_dump "$DATABASE_URL" | gzip > "$BACKUP_FILE"
+  echo "post-deploy: Database backup written to ${BACKUP_FILE}"
+
+  # Upload to S3-compatible storage (uncomment when credentials are configured)
+  # aws s3 cp "$BACKUP_FILE" "s3://${BACKUP_S3_BUCKET}/db/${TIMESTAMP}.sql.gz"
+  # echo "post-deploy: Backup uploaded to s3://${BACKUP_S3_BUCKET}/db/${TIMESTAMP}.sql.gz"
+
+  rm -f "$BACKUP_FILE"
+else
+  echo "post-deploy: BACKUP_S3_BUCKET not set — skipping database backup"
+fi

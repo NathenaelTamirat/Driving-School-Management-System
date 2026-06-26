@@ -61,12 +61,13 @@ module Api
           :woreda,
           :subcity,
           :city,
+          :email,
           :verified,
           :verified_at,
           :theory_days_completed,
           :practical_days_completed,
           :mock_test_score,
-          # File uploads (stored in memory for now)
+          # File uploads (ActiveStorage)
           :profile_photo,
           :yellow_card,
           :grade_8,
@@ -77,15 +78,13 @@ module Api
       end
 
       def handle_file_uploads
-        # TODO: Implement ActiveStorage for persistent file storage
-        # For now, files are stored in memory and logged
         file_fields = %w[profile_photo yellow_card grade_8 grade_10 grade_12 medical]
 
         file_fields.each do |field|
-          if params[:student][field].present?
-            Rails.logger.info "[StudentsController] Received file upload: #{field} - #{params[:student][field].original_filename}"
-            # Files will be stored in memory until ActiveStorage is implemented
-          end
+          next unless params[:student][field].present?
+
+          @student.public_send(field).attach(params[:student][field])
+          Rails.logger.info "[StudentsController] Uploaded #{field} for student #{@student.student_id}"
         end
       end
     end

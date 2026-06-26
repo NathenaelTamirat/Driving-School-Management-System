@@ -53,20 +53,23 @@ module Api
       def record_result
         result_params = params.require(:exam_booking).permit(:score, :notes)
 
-        if @exam_booking.complete!(result_params[:score], result_params[:notes])
-          # Apply penalty if exam was failed
+        ActiveRecord::Base.transaction do
+          @exam_booking.complete!(result_params[:score], result_params[:notes])
+
           if @exam_booking.failed?
             penalty_engine = Penalty::PenaltyEngine.new(@student, @exam_booking)
-            penalty_engine.apply_failure_penalty
+            raise ActiveRecord::Rollback unless penalty_engine.apply_failure_penalty
           end
-
-          # Send exam result notification email
-          send_exam_result_email
-
-          render_success(@exam_booking)
-        else
-          render_error("Failed to record exam result", errors: @exam_booking.errors.full_messages)
         end
+
+        # Send exam result notification email (outside the transaction — email delivery must not roll back)
+        send_exam_result_email
+
+        render_success(@exam_booking)
+      rescue ActiveRecord::RecordNotFound
+        render_error("Exam booking not found", status: :not_found, code: "NOT_FOUND")
+      rescue ActiveRecord::RecordInvalid => e
+        render_error("Failed to record exam result", errors: e.record.errors.full_messages)
       end
 
       private
@@ -91,9 +94,7 @@ module Api
       end
 
       def send_exam_booking_email
-        # TODO: Add email field to student model and use @student.email
-        # For now, using a placeholder email
-        student_email = "#{@student.student_id}@example.com"
+        student_email = @student.email.presence or raise "Student #{@student.student_id} has no email"
         MeklitMailer.exam_booking(@exam_booking, student_email).deliver_later
       rescue StandardError => e
         Rails.logger.error "[ExamBookingsController] Failed to send booking email: #{e.message}"
@@ -101,9 +102,7 @@ module Api
       end
 
       def send_exam_result_email
-        # TODO: Add email field to student model and use @student.email
-        # For now, using a placeholder email
-        student_email = "#{@student.student_id}@example.com"
+        student_email = @student.email.presence or raise "Student #{@student.student_id} has no email"
         MeklitMailer.exam_result(@exam_booking, student_email).deliver_later
       rescue StandardError => e
         Rails.logger.error "[ExamBookingsController] Failed to send result email: #{e.message}"
