@@ -15,6 +15,12 @@ production:
     schedule: "0 3 1 * *"  # Runs at 3:00 AM on the 1st of every month
     queue: default
 
+  # Payment Reconciliation - Daily at 11:00 PM
+  payment_reconciliation:
+    class: PaymentReconciliationJob
+    schedule: "0 23 * * *"  # Runs at 11:00 PM every day
+    queue: default
+
 # Development schedule - for testing recurring jobs locally
 development:
   # Attendance Breach Scanner - Every hour for testing
@@ -27,6 +33,12 @@ development:
   payroll_compute:
     class: PayrollComputeJob
     schedule: "0 0 * * *"  # Daily at midnight
+    queue: default
+
+  # Payment Reconciliation - Every 6 hours for testing
+  payment_reconciliation:
+    class: PaymentReconciliationJob
+    schedule: "0 */6 * * *"  # Every 6 hours
     queue: default
 
 # Test environment - no recurring jobs

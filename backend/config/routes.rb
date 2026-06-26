@@ -49,6 +49,16 @@ Rails.application.routes.draw do
       resources :invoices, only: [ :index, :show ] do
         post :mark_paid, on: :member
       end
+
+      # Finance Module - Financial Reports
+      namespace :financial_reports do
+        get :summary
+        get :revenue
+        get :collections
+        get :monthly_comparison
+        get :export
+        post :reconcile
+      end
     end
   end
 
