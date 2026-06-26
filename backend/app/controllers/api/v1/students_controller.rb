@@ -18,7 +18,7 @@ module Api
 
       # GET /api/v1/students/:id
       def show
-        render json: @student
+        render_success(@student)
       end
 
       # POST /api/v1/students
@@ -31,9 +31,9 @@ module Api
           # TODO: Implement ActiveStorage for persistent file storage
           handle_file_uploads if params[:student]
 
-          render json: @student, status: :created
+          render_success(@student, status: :created)
         else
-          render json: { errors: @student.errors.full_messages }, status: :unprocessable_entity
+          render_error("Failed to create student", errors: @student.errors.full_messages)
         end
       end
 
@@ -42,7 +42,7 @@ module Api
       def set_student
         @student = Student.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: "Student not found" }, status: :not_found
+        render_error("Student not found", status: :not_found, code: "NOT_FOUND")
       end
 
       def student_params

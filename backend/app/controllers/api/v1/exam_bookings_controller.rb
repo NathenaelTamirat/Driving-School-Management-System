@@ -10,12 +10,12 @@ module Api
       # GET /api/v1/students/:student_id/exam_bookings
       def index
         @exam_bookings = @student.exam_bookings.order(scheduled_date: :asc)
-        render json: @exam_bookings
+        render_success(@exam_bookings)
       end
 
       # GET /api/v1/students/:student_id/exam_bookings/:id
       def show
-        render json: @exam_booking
+        render_success(@exam_booking)
       end
 
       # POST /api/v1/students/:student_id/exam_bookings
@@ -25,27 +25,27 @@ module Api
         if @exam_booking.save
           # Send exam booking notification email
           send_exam_booking_email
-          render json: @exam_booking, status: :created
+          render_success(@exam_booking, status: :created)
         else
-          render json: { errors: @exam_booking.errors.full_messages }, status: :unprocessable_entity
+          render_error("Failed to create exam booking", errors: @exam_booking.errors.full_messages)
         end
       end
 
       # PATCH/PUT /api/v1/students/:student_id/exam_bookings/:id
       def update
         if @exam_booking.update(exam_booking_params)
-          render json: @exam_booking
+          render_success(@exam_booking)
         else
-          render json: { errors: @exam_booking.errors.full_messages }, status: :unprocessable_entity
+          render_error("Failed to update exam booking", errors: @exam_booking.errors.full_messages)
         end
       end
 
       # POST /api/v1/students/:student_id/exam_bookings/:id/cancel
       def cancel
         if @exam_booking.cancel!
-          render json: @exam_booking
+          render_success(@exam_booking)
         else
-          render json: { errors: @exam_booking.errors.full_messages }, status: :unprocessable_entity
+          render_error("Failed to cancel exam booking", errors: @exam_booking.errors.full_messages)
         end
       end
 
@@ -63,9 +63,9 @@ module Api
           # Send exam result notification email
           send_exam_result_email
 
-          render json: @exam_booking
+          render_success(@exam_booking)
         else
-          render json: { errors: @exam_booking.errors.full_messages }, status: :unprocessable_entity
+          render_error("Failed to record exam result", errors: @exam_booking.errors.full_messages)
         end
       end
 
@@ -74,23 +74,19 @@ module Api
       def set_student
         @student = Student.find(params[:student_id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: "Student not found" }, status: :not_found
+        render_error("Student not found", status: :not_found, code: "NOT_FOUND")
       end
 
       def set_exam_booking
         @exam_booking = @student.exam_bookings.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: "Exam booking not found" }, status: :not_found
-      end
-
-      def exam_booking_params
-        params.require(:exam_booking).permit(:exam_type, :scheduled_date, :venue, :notes)
+        render_error("Exam booking not found", status: :not_found, code: "NOT_FOUND")
       end
 
       def validate_eligibility
         validator = ERTA::EligibilityValidator.new(@student)
         unless validator.call
-          render json: { errors: validator.errors }, status: :forbidden
+          render_error("Student not eligible for exam", status: :forbidden, errors: validator.errors)
         end
       end
 

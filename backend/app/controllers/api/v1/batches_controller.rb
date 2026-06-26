@@ -24,7 +24,7 @@ module Api
 
       # GET /api/v1/batches/:id
       def show
-        render json: @batch
+        render_success(@batch)
       end
 
       # POST /api/v1/batches
@@ -32,9 +32,9 @@ module Api
         @batch = Batch.new(batch_params)
 
         if @batch.save
-          render json: @batch, status: :created
+          render_success(@batch, status: :created)
         else
-          render json: { errors: @batch.errors.full_messages }, status: :unprocessable_entity
+          render_error("Failed to create batch", errors: @batch.errors.full_messages)
         end
       end
 
@@ -43,7 +43,7 @@ module Api
       def set_batch
         @batch = Batch.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: "Batch not found" }, status: :not_found
+        render_error("Batch not found", status: :not_found, code: "NOT_FOUND")
       end
 
       def batch_params
