@@ -1,3 +1,10 @@
+// shadcn/ui Button component.
+// Built on Radix Slot + class-variance-authority for polymorphic rendering:
+// - `asChild` delegates the rendered element to a child (via Radix Slot)
+// - `variant` (default/destructive/outline/secondary/ghost/link) controls colour
+// - `size` (default/sm/lg/icon) controls spacing
+// Includes a subtle `active:scale-[0.97]` press animation on clickable variants.
+
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";

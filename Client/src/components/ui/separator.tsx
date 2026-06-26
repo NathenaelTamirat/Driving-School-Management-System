@@ -1,3 +1,9 @@
+// shadcn/ui Separator component.
+// Wraps Radix Separator primitive for accessible horizontal/vertical rules.
+// Used between sections in the student-detail-modal and enrollment wizard
+// to visually group related form fields. The `decorative` prop defaults to
+// true (rendered as a presentational element, not an ARIA separator).
+
 "use client";
 
 import * as React from "react";

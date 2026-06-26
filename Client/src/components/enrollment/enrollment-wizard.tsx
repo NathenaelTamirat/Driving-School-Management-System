@@ -1,3 +1,11 @@
+// Top-level enrollment wizard orchestrator.
+// Renders the four-step flow: Profile → Category → Documents → Payment.
+// Delegates each step to its own component and manages step transitions
+// via the EnrollmentContext.setStep() method. The header changes appearance
+// on step 1 (showing DSAS branding with a cancel link) versus subsequent
+// steps (showing "Exit Enrollment" back-link with a running total).
+// The "Current Total" badge updates reactively as the user picks a category.
+
 "use client";
 
 import Link from "next/link";

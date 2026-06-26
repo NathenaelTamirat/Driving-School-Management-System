@@ -1,3 +1,22 @@
+// Root stylesheet for the Driving School client.
+// Uses Tailwind CSS v4 with the `tailwindcss-animate` plugin (for Radix
+// animation utilities) and a custom `dark` variant that applies when the
+// `<html>` element has the `.dark` class (set by next-themes).
+//
+// CSS custom properties are defined in OKLCH colour space for perceptually
+// uniform colour manipulation. The `:root` block defines the light theme;
+// `.dark` overrides for dark mode. The `@theme inline` block maps these
+// custom properties to Tailwind's theme tokens (--color-*, --radius, etc.)
+// so they can be used with Tailwind utility classes like `bg-background`
+// or `text-foreground`.
+//
+// Additional sidebar-specific tokens (--sidebar, --sidebar-foreground,
+// --sidebar-accent, etc.) style the dashboard sidebar independent of the
+// main content area colours.
+//
+// The `@layer base` block sets a global border colour via the `*` selector
+// and applies a smooth colour transition on the body for theme switching.
+
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";

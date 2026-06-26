@@ -1,3 +1,19 @@
+// Payment step — the final page of the enrollment wizard.
+// Presents a Telebirr payment interface with two modes:
+// 1. "Scan to Pay" — a decorative QR-code placeholder (checkerboard SVG)
+// 2. "Direct Push" — enter the customer's phone and send a payment request
+//
+// The "Send Payment Request" button is simulated (1.2s delay) and toggles
+// paymentRequestSent in context. The "Finish Enrollment" button calls
+// createStudentFromEnrollment() to POST the full wizard data to the backend,
+// clears the localStorage draft, and shows a success screen with options to
+// return to the dashboard or register another student. If the server is
+// unavailable, it still marks the enrollment as "complete" on the frontend
+// (degraded UX but no data loss since the wizard state was valid).
+//
+// The order summary sidebar shows the registration fee + category tuition
+// breakdown and the student's full name.
+
 "use client";
 
 import { useEffect, useState } from "react";

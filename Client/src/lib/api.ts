@@ -1,3 +1,15 @@
+// API client layer for the Driving School Management System.
+// Communicates with the Rails backend at NEXT_PUBLIC_API_URL (default localhost:3001).
+//
+// Key responsibilities:
+// 1. Student CRUD (createStudent, updateStudent, getStudents, getStudent)
+// 2. Batch listing (getBatches)
+// 3. Multi-step enrollment pipeline (mapEnrollmentToStudentPayload,
+//    buildEnrollmentFormData, createStudentFromEnrollment)
+//
+// The enrollment flow conditionally switches between JSON and multipart/form-data
+// based on whether file uploads are present, keeping the backend endpoint unified.
+
 type ApiResponse<T = unknown> = {
   success: boolean;
   data?: T;
@@ -11,6 +23,10 @@ import { UPLOAD_SLOTS } from "@/lib/validations";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 const DEFAULT_BATCH_ID = Number(process.env.NEXT_PUBLIC_DEFAULT_BATCH_ID || "1");
 
+// Generic POST /api/v1/students.
+// Accepts both plain objects (JSON-encoded) and FormData (file uploads).
+// Returns a normalised ApiResponse envelope so callers always handle
+// success/failure uniformly regardless of the HTTP status code.
 export async function createStudent(
   payload: Record<string, unknown> | FormData,
 ): Promise<ApiResponse> {
@@ -46,12 +62,19 @@ export async function createStudent(
   }
 }
 
+// Generates a short, human-readable ID of the form <prefix><6-phone-digits><4-timestamp>.
+// The phone suffix comes from the last 6 non-digit characters of the phone number
+// (guaranteeing uniqueness across students from different contacts) and the 4-digit
+// timestamp suffix provides millisecond-level disambiguation.
 function generateId(prefix: string, phone: string) {
   const digits = phone.replace(/\D/g, "").slice(-6).padStart(6, "0");
   const stamp = Date.now().toString().slice(-4);
   return `${prefix}${digits}${stamp}`;
 }
 
+// Transforms the wizard's EnrollmentState into the flat payload expected by
+// the Rails backend's Student model. Generated IDs (student_id, document_id)
+// are deterministic from the student's phone and the current timestamp.
 export function mapEnrollmentToStudentPayload(state: EnrollmentState) {
   const { profile } = state;
   const phoneDigits = profile.phone.replace(/\D/g, "");
@@ -75,6 +98,10 @@ export function mapEnrollmentToStudentPayload(state: EnrollmentState) {
   };
 }
 
+// Builds a multipart/form-data request from the wizard state.
+// String fields are appended as `student[key]=value` and file uploads
+// from UPLOAD_SLOTS are appended as `student[key]=File` so ActiveStorage
+// / multipart middleware can handle them transparently.
 export function buildEnrollmentFormData(state: EnrollmentState): FormData {
   const formData = new FormData();
   const payload = mapEnrollmentToStudentPayload(state);
@@ -93,6 +120,8 @@ export function buildEnrollmentFormData(state: EnrollmentState): FormData {
   return formData;
 }
 
+// High-level enrollment submission: picks JSON vs multipart automatically.
+// Returns the same ApiResponse shape as createStudent.
 export async function createStudentFromEnrollment(
   state: EnrollmentState,
 ): Promise<ApiResponse> {
@@ -103,6 +132,7 @@ export async function createStudentFromEnrollment(
   return createStudent(payload);
 }
 
+// GET /api/v1/students — returns the full student list.
 export async function getStudents(): Promise<ApiResponse<Student[]>> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/students`);
@@ -114,6 +144,7 @@ export async function getStudents(): Promise<ApiResponse<Student[]>> {
   }
 }
 
+// GET /api/v1/students/:id — returns a single student record.
 export async function getStudent(id: number): Promise<ApiResponse<Student>> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}`);
@@ -125,6 +156,7 @@ export async function getStudent(id: number): Promise<ApiResponse<Student>> {
   }
 }
 
+// GET /api/v1/batches — returns all enrolment batches (used for dropdowns / filtering).
 export async function getBatches(): Promise<ApiResponse<Batch[]>> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/batches`);
@@ -136,6 +168,7 @@ export async function getBatches(): Promise<ApiResponse<Batch[]>> {
   }
 }
 
+// PATCH /api/v1/students/:id — updates a student's fields.
 export async function updateStudent(
   id: number,
   data: Record<string, unknown>,
@@ -154,6 +187,8 @@ export async function updateStudent(
   }
 }
 
+// Type shape returned by the backend Student index/show endpoints.
+// Mirrors the Rails model attributes from backend/app/models/student.rb.
 export type Student = {
   id: number;
   batch_id: number;
@@ -184,6 +219,7 @@ export type Student = {
   updated_at: string;
 };
 
+// Type shape for the lightweight Batch model used in selector dropdowns.
 export type Batch = {
   id: number;
   name: string;

@@ -1,3 +1,13 @@
+// Root Next.js layout wrapping every page in the application.
+// Sets up:
+// 1. Geist Sans + Geist Mono fonts via next/font (variable CSS custom properties)
+// 2. ThemeProvider (next-themes) for light/dark mode with system preference detection
+// 3. Sonner Toaster for global toast notifications (top-right, rich colours)
+// 4. HTML `suppressHydrationWarning` to avoid React warnings from next-themes
+//    class toggling during SSR hydration
+//
+// Metadata sets the tab title and description for SEO/social sharing.
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";

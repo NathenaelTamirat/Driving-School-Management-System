@@ -1,3 +1,15 @@
+// React context provider for the multi-step enrollment wizard.
+// Manages the full EnrollmentState — profile, category, documents, payment —
+// and persists a draft to localStorage on demand so users can resume the
+// wizard after closing the browser. Draft persistence excludes File objects
+// (only names/sizes/types are saved) because localStorage cannot store Blobs.
+//
+// On mount (useEffect), the provider automatically hydrates any previously
+// saved draft, allowing seamless session recovery. Once fully submitted,
+// callers should invoke clearDraft() (see payment-step.tsx).
+//
+// Exports the useEnrollment() hook for child components to read/write state.
+
 "use client";
 
 import {

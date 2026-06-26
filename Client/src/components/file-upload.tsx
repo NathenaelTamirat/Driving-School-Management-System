@@ -1,3 +1,12 @@
+// Drag-and-drop file upload component with progress simulation.
+// Used in both the enrollment wizard (documents-step.tsx) and the standalone
+// student form (student-form.tsx). Supports click-to-upload and drag-and-drop,
+// generates previews for images (via FileReader), shows upload progress via
+// a simulated interval, and displays file-type-specific thumbnails
+// (image preview, PDF icon, generic file icon).
+// Uses Framer Motion AnimatePresence for smooth transitions between the
+// drop zone and the file preview card.
+
 "use client";
 
 import { useState, useCallback, useRef } from "react";

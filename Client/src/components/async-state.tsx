@@ -1,3 +1,14 @@
+// Reusable async-state visual components for data-fetching pages.
+// Provides four primitives:
+// 1. LoadingState — pulsing spinner with configurable message
+// 2. ErrorState — error icon + message + optional retry button
+// 3. NotFoundState — 404-style display with optional action CTA
+// 4. AsyncWrapper — a small state machine that picks one of the above
+//    or renders children based on isLoading/error/onRetry props.
+//
+// These are used on the dashboard and students list pages to keep loading,
+// error, and empty states visually consistent across the app.
+
 "use client";
 
 import { motion } from "framer-motion";

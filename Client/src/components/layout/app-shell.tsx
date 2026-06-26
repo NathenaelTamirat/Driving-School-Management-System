@@ -1,3 +1,10 @@
+// Root layout wrapper for the authenticated dashboard area.
+// Composes Sidebar (left nav) + Header (top bar) + scrollable <main> content
+// into a full-height flex layout. The outer container uses h-screen overflow-hidden
+// so only the main area scrolls (sidebar and header stay fixed).
+// Used in src/app/(dashboard)/layout.tsx as the layout component for all
+// routes under the (dashboard) route group.
+
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
 

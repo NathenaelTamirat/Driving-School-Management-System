@@ -18,7 +18,9 @@ class User < ApplicationRecord
   validates :years_experience,
             numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
-  # NOTE: associations to students/attendance/payroll are intentionally NOT
+  has_many :payroll_entries, dependent: :destroy
+
+  # NOTE: associations to students/attendance are intentionally NOT
   # declared yet. Those tables/FKs don't exist on main (instructors are tracked
   # by an instructor_name string per the team decision). Add them when the FK
   # columns land.

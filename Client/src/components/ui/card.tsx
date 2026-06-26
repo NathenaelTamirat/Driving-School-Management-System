@@ -1,3 +1,11 @@
+// shadcn/ui Card component family.
+// A composite layout primitive (Card, CardHeader, CardTitle, CardDescription,
+// CardContent, CardFooter) used extensively across the dashboard and
+// enrollment wizard for grouping related content into visually distinct
+// containers. Each sub-component is an independent forwardRef'd <div> with
+// consistent spacing (p-6 for header/content/footer, pt-0 on content when
+// it follows a header).
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 

@@ -1,3 +1,14 @@
+// Zod validation schemas and constants for the Driving School Management System.
+//
+// This module serves two consumers:
+// 1. The standalone student form (studentSchema) — used by student-form.tsx
+// 2. The enrollment wizard's file-upload rules (fileSchema, docFileSchema, imageFileSchema)
+//    — consumed by documents-step.tsx and file-upload.tsx
+//
+// UPLOAD_SLOTS defines the canonical set of documents a student must or can
+// upload during enrolment. The list is referenced by both the wizard UI and
+// the API layer (api.ts) so the client and backend stay in sync on document keys.
+
 import { z } from "zod";
 
 const BLOOD_TYPES = [
@@ -24,6 +35,8 @@ const ACCEPTED_DOC_TYPES = [
 ];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+// Schema for the direct (non-wizard) student creation/edit form.
+// Mirrors the Rails model validations in backend/app/models/student.rb.
 export const studentSchema = z.object({
   first_name: z
     .string()
@@ -85,17 +98,20 @@ export const studentSchema = z.object({
 
 export type StudentFormValues = z.infer<typeof studentSchema>;
 
+// Base file validation: every uploaded file must be ≤10 MB.
 export const fileSchema = z
   .instanceof(File)
   .refine((file) => file.size <= MAX_FILE_SIZE, {
     message: "File size must be less than 10MB",
   });
 
+// Stricter variant for photo uploads — only image MIME types accepted.
 export const imageFileSchema = fileSchema.refine(
   (file) => ACCEPTED_IMAGE_TYPES.includes(file.type),
   { message: "Only image files (JPEG, PNG, WebP, HEIC) are allowed" },
 );
 
+// Looser variant for document uploads — accepts both images and PDF.
 export const docFileSchema = fileSchema.refine(
   (file) => ACCEPTED_DOC_TYPES.includes(file.type),
   { message: "Only images and PDF files are allowed" },
@@ -108,6 +124,10 @@ export type UploadSlot = {
   acceptImages?: boolean;
 };
 
+// Canonical list of document upload slots required or optional for enrolment.
+// Each slot's `key` is used as the multipart field name sent to the backend
+// and as the key in EnrollmentState.documents.
+// The order here determines the render order in the documents step.
 export const UPLOAD_SLOTS: UploadSlot[] = [
   { key: "profile_photo", label: "Profile Photo", required: true, acceptImages: true },
   { key: "yellow_card", label: "Yellow Card", required: true },

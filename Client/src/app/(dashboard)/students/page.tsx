@@ -1,3 +1,16 @@
+// Students list page — the main data-browsing view of the dashboard.
+// Fetches all students and batches on mount, then provides:
+// 1. Four summary stat cards (Total, Batches, Learning, Graduated)
+// 2. Search bar (by name or student ID)
+// 3. Status filter dropdown (registered / theory / practical / exam-ready / graduated)
+// 4. Verification filter (all / verified / unverified)
+// 5. Sortable table columns (Student ID, Full Name, Status) with asc/desc toggle
+// 6. Click-to-open StudentDetailModal for viewing / verifying individual records
+//
+// Uses skeleton loading placeholders (animate-pulse) for the stat cards and
+// table rows while data is fetching. Empty state shows a contextual message
+// depending on whether filters are active or the list is genuinely empty.
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";

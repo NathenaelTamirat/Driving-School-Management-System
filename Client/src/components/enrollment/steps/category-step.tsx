@@ -1,3 +1,11 @@
+// Category selection step — the second page of the enrollment wizard.
+// Displays the four license categories as selectable cards in a 2×2 grid.
+// Each card shows the category icon, title, price, and requirement tags
+// (minimum grade, medical cert, duration, prerequisite license). Selected
+// cards are highlighted with a blue border and checkmark. The user cannot
+// proceed without selecting a category (the "Continue" button is disabled).
+// Icons are mapped via iconMap and requirementIconMap from lucide-react icons.
+
 "use client";
 
 import {

@@ -1,3 +1,12 @@
+// Zod validation schema specific to the enrollment wizard's profile step.
+//
+// Separate from src/lib/validations.ts because the wizard uses camelCase
+// field names (matching EnrollmentProfile) while the standalone form uses
+// snake_case (matching the Rails API). Both schemas enforce the same
+// business rules: required fields, max lengths, blood-type enumeration,
+// Ethiopian date format (YYYY-MM-DD), and phone-digit constraints.
+// Kibele and subcity are optional in the wizard (they can be empty strings).
+
 import { z } from "zod";
 import { BLOOD_TYPE_OPTIONS } from "@/lib/validations";
 

@@ -1,3 +1,9 @@
+// shadcn/ui Input component.
+// A styled <input> with consistent border, focus-ring, disabled, file-input,
+// and placeholder styling. Uses forwardRef so it works correctly with
+// react-hook-form's register / controller patterns throughout the app
+// (student-form.tsx, enrollment steps, etc.).
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 

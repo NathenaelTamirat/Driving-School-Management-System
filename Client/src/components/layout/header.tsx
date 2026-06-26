@@ -1,3 +1,9 @@
+// Dashboard header bar: theme toggle (light/dark) and admin avatar badge.
+// Uses next-themes for hydration-safe theme switching — the Sun/Moon icon
+// only renders after mount (mounted guard) to prevent hydration mismatch
+// between server-rendered HTML and client-side theme detection.
+// The "AD" badge is a static placeholder for the admin profile avatar.
+
 "use client";
 
 import { useEffect, useState } from "react";

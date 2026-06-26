@@ -1,3 +1,13 @@
+// shadcn/ui Select component.
+// Built on Radix Select primitive for accessible, keyboard-navigable dropdowns.
+// Used throughout the app for blood-type selection, category picker, and
+// any other enum/option inputs. The `position="popper"` mode on SelectContent
+// makes the dropdown float relative to the trigger (overlapping other content),
+// which is the expected behaviour for most form layouts.
+//
+// Sub-components exported: Select, SelectTrigger, SelectValue, SelectContent,
+// SelectGroup, SelectLabel, SelectItem, SelectSeparator.
+
 "use client";
 
 import * as React from "react";

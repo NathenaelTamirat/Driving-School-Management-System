@@ -1,3 +1,12 @@
+// Detail modal for viewing and verifying a single student record.
+// Opens on click from the student list page. Displays full student info
+// including name, IDs, DOB, blood type, address, training progress
+// (theory days, practical days, mock test score), verification status,
+// and any active penalty. Admin-only action: "Verify Student" button
+// PATCHes verified=true + verified_at to the backend.
+// Uses a hand-crafted CalendarIcon SVG (not from lucide-react) for
+// a distinct look in the date-of-birth row.
+
 "use client";
 
 import { useState } from "react";

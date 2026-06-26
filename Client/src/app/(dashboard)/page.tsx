@@ -1,3 +1,8 @@
+// Dashboard home page — the root route of the authenticated area.
+// Currently a simple landing page with a page title and a "New Student" CTA
+// button that links to the enrollment wizard (/students/new). The dashboard
+// will later display summary widgets (student counts, batch status, etc.).
+
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";

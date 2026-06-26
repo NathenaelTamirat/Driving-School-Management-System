@@ -1,6 +1,23 @@
+// Type definitions and constants for the multi-step student enrollment wizard.
+//
+// This module is the single source of truth for:
+// 1. License categories offered by the school (LICENSE_CATEGORIES)
+// 2. The shape of wizard state (EnrollmentState)
+// 3. Document upload slots and their metadata (ENROLLMENT_DOCUMENT_ROWS)
+// 4. Pricing constants (REGISTRATION_FEE, per-category prices)
+// 5. Local-storage draft persistence key (ENROLLMENT_DRAFT_KEY)
+//
+// The enrollment pipeline is decoupled from the API layer: this module only
+// defines *what* the wizard collects; src/lib/api.ts handles *how* it's sent.
+
 import type { UploadSlot } from "@/lib/validations";
 import { UPLOAD_SLOTS } from "@/lib/validations";
 
+// Four license categories match the Ethiopian driving licence tiers offered
+// by the school: private auto (B), motorcycle (A), public-transport minibus
+// (C1), and dry-cargo truck (C). Each entry drives the pricing card UI on
+// the category-selection step as well as the fee calculation in
+// calculateEnrollmentTotal().
 export type LicenseCategoryId = "auto" | "motor" | "public1" | "drycargo1";
 
 export type LicenseCategory = {
@@ -16,6 +33,9 @@ export type LicenseCategory = {
   }[];
 };
 
+// Personal information collected on the first step of the wizard.
+// All fields map 1:1 to columns on the backend Student model except
+// emergency contact fields (stored separately or logged for reference).
 export type EnrollmentProfile = {
   firstNameEn: string;
   fatherNameEn: string;
@@ -42,6 +62,9 @@ export type UploadedDocument = {
   size: number;
 };
 
+// Complete snapshot of the wizard at any point in time.
+// Persisted to localStorage under ENROLLMENT_DRAFT_KEY so users can
+// resume a partially-filled enrolment without data loss.
 export type EnrollmentState = {
   profile: EnrollmentProfile;
   categoryId: LicenseCategoryId | null;
@@ -118,6 +141,9 @@ export type EnrollmentDocumentRow = {
   acceptImages?: boolean;
 };
 
+// Human-readable descriptions for each upload slot, driven by the
+// UPLOAD_SLOTS array from src/lib/validations.ts but augmented with
+// context-specific explanations for the enrollment document step.
 const UPLOAD_SLOT_DESCRIPTIONS: Record<UploadSlot["key"], string> = {
   profile_photo: "Recent passport-size photo of the student",
   yellow_card: "Valid yellow health card document (optional)",
@@ -171,12 +197,15 @@ export function getCategoryById(id: LicenseCategoryId | null) {
   return LICENSE_CATEGORIES.find((c) => c.id === id) ?? null;
 }
 
+// Total fee = one-time registration fee + category-specific tuition.
 export function calculateEnrollmentTotal(categoryId: LicenseCategoryId | null) {
   const category = getCategoryById(categoryId);
   if (!category) return 0;
   return REGISTRATION_FEE + category.price;
 }
 
+// Formats a numeric amount as Ethiopian Birr (ETB) using en-US locale
+// with exactly two decimal places (e.g. "26,010.00").
 export function formatEtb(amount: number) {
   return amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
