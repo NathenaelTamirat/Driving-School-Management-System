@@ -2,6 +2,11 @@
 
 module Api
   module V1
+    # Authenticated controller for recording student mock test results.
+    # Mock tests determine readiness for the actual ERTA exam: a score > 37
+    # grants a "passed" result and unlocks the practical training phase,
+    # while ≤ 37 flags the student for remedial training.
+    # The score is synced to the student record via an after_save hook on the model.
     class MockTestsController < BaseController
       before_action :set_student
 
