@@ -1,3 +1,11 @@
+// shadcn/ui Badge component with custom variants.
+// Extends the standard shadcn badge set (default/secondary/destructive/outline)
+// with two application-specific variants:
+//   - `success` (emerald)  — used for "verified", "active", "completed" states
+//   - `warning` (amber)    — used for "pending", "under review" states
+// These map directly to student-status indicators on the dashboard and
+// student detail views.
+
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
