@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 module Graduation
+  # Orchestrates the full graduation workflow:
+  # 1. Checks eligibility via EligibilityValidator
+  # 2. Transitions student to "graduated" AASM state
+  # 3. Creates a GraduationRecord (dossier_status: "compiling")
+  # 4. Enqueues DossierTransferJob to push the dossier to ERTA
   class Processor
     attr_reader :student, :errors
 
