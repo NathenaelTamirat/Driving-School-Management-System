@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 module Graduation
+  # Validates that a student meets all conditions for graduation:
+  # status must be "exam_eligible", must have a passed practical exam,
+  # and must not be under an active penalty.
   class EligibilityValidator
     attr_reader :student, :errors
 
