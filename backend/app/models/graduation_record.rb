@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+# Tracks the ERTA dossier lifecycle for a graduated student.
+# A dossier must be compiled locally, marked ready, then transferred to ERTA.
+# Once transferred (dossier_status: "transferred"), the student is officially
+# certified by the Ethiopian Road Transport Authority.
 class GraduationRecord < ApplicationRecord
   belongs_to :student
 
