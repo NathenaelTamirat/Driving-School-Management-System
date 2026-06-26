@@ -22,7 +22,29 @@ RSpec.describe 'Api::V1::Students', type: :request do
       create_list(:student, 3, batch: batch)
       get '/api/v1/students', headers: auth_headers(user)
       expect(response).to have_http_status(:ok)
-      expect(JSON.parse(response.body).size).to eq(3)
+      body = JSON.parse(response.body)
+      expect(body['success']).to be true
+      expect(body['data']['students'].size).to eq(3)
+      expect(body['data']['meta']['total']).to eq(3)
+      expect(body['data']['meta']['page']).to eq(1)
+    end
+
+    it 'paginates results' do
+      create_list(:student, 5, batch: batch)
+      get '/api/v1/students', params: { page: 1, per_page: 2 }, headers: auth_headers(user)
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body['data']['students'].size).to eq(2)
+      expect(body['data']['meta']['total']).to eq(5)
+      expect(body['data']['meta']['per_page']).to eq(2)
+    end
+
+    it 'clamps per_page to maximum of 200' do
+      create_list(:student, 3, batch: batch)
+      get '/api/v1/students', params: { per_page: 500 }, headers: auth_headers(user)
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body['data']['meta']['per_page']).to eq(200)
     end
   end
 

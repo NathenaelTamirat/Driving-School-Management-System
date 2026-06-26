@@ -31,7 +31,8 @@ module Graduation
     def validate_passed_practical_exam
       passed = student.exam_bookings
                       .where(exam_type: "practical", status: "completed")
-                      .any? { |b| b.passed? }
+                      .where("score >= ?", ExamBooking::PASSING_SCORE)
+                      .exists?
 
       errors << "No passed practical exam found" unless passed
     end

@@ -7,8 +7,13 @@ module Api
 
       # GET /api/v1/students
       def index
-        @students = Student.all
-        render json: @students
+        page     = params.fetch(:page, 1).to_i
+        per_page = params.fetch(:per_page, 50).to_i.clamp(1, 200)
+        @students = Student.order(:created_at).page(page).per(per_page)
+        render_success({
+          students: @students.as_json,
+          meta: { page: page, per_page: per_page, total: Student.count }
+        })
       end
 
       # GET /api/v1/students/:id

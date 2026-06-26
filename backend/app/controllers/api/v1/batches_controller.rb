@@ -13,8 +13,13 @@ module Api
 
       # GET /api/v1/batches
       def index
-        @batches = Batch.all
-        render json: @batches
+        page     = params.fetch(:page, 1).to_i
+        per_page = params.fetch(:per_page, 50).to_i.clamp(1, 200)
+        @batches = Batch.order(:created_at).page(page).per(per_page)
+        render_success({
+          batches: @batches.as_json,
+          meta: { page: page, per_page: per_page, total: Batch.count }
+        })
       end
 
       # GET /api/v1/batches/:id
