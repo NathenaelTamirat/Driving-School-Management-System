@@ -1,3 +1,13 @@
+// Standalone student creation form with a 3-step wizard flow:
+//   1. Student Info — name, DOB, blood type, address, IDs, verification status
+//   2. Documents — file uploads for each UPLOAD_SLOT (profile photo, grades, etc.)
+//   3. Review & Submit — read-only summary before POST to /api/v1/students
+//
+// Uses react-hook-form with Zod resolver for client-side validation matching
+// the Rails backend model rules. File uploads are managed locally via
+// uploadedFiles state and appended as multipart/form-data on submit.
+// On success, shows a success screen and resets all form state after 3s.
+
 "use client";
 
 import { useState, useCallback } from "react";
