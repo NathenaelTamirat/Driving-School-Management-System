@@ -2,6 +2,11 @@
 
 module Api
   module V1
+    # Public controller for ERTA submission batches.
+    # Allows listing, viewing, and creating batches that group students
+    # for bulk export to the ERTA (Ethiopian Road Transport Authority) system.
+    # Batches are the unit of approval: once submitted, ERTA either approves or
+    # rejects the entire batch, which graduates or returns the contained students.
     class BatchesController < ApplicationController
       before_action :set_batch, only: [ :show ]
 
