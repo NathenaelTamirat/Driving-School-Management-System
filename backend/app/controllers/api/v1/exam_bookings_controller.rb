@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class ExamBookingsController < ApplicationController
+    class ExamBookingsController < BaseController
       before_action :set_student
       before_action :set_exam_booking, only: %i[show update cancel]
       before_action :validate_eligibility, only: %i[create]

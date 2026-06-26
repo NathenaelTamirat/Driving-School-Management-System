@@ -7,8 +7,32 @@
 // 3. Multi-step enrollment pipeline (mapEnrollmentToStudentPayload,
 //    buildEnrollmentFormData, createStudentFromEnrollment)
 //
-// The enrollment flow conditionally switches between JSON and multipart/form-data
-// based on whether file uploads are present, keeping the backend endpoint unified.
+// All endpoints now require a valid JWT. The token is stored in localStorage
+// after a successful login (POST /api/v1/auth/login) and sent as the
+// Authorization header on every request.
+
+const TOKEN_KEY = "driving_school_token";
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+/** Returns headers common to every API call, including auth if a token exists. */
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...extra };
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
 
 type ApiResponse<T = unknown> = {
   success: boolean;
@@ -34,7 +58,7 @@ export async function createStudent(
     const isFormData = payload instanceof FormData;
     const response = await fetch(`${API_BASE_URL}/api/v1/students`, {
       method: "POST",
-      headers: isFormData ? undefined : { "Content-Type": "application/json" },
+      headers: isFormData ? authHeaders() : authHeaders({ "Content-Type": "application/json" }),
       body: isFormData
         ? payload
         : JSON.stringify({ student: payload }),
@@ -135,7 +159,7 @@ export async function createStudentFromEnrollment(
 // GET /api/v1/students — returns the full student list.
 export async function getStudents(): Promise<ApiResponse<Student[]>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/students`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/students`, { headers: authHeaders() });
     const json = await response.json();
     if (!response.ok) return { success: false, error: json.error || "Failed to fetch students" };
     return { success: true, data: json };
@@ -147,7 +171,7 @@ export async function getStudents(): Promise<ApiResponse<Student[]>> {
 // GET /api/v1/students/:id — returns a single student record.
 export async function getStudent(id: number): Promise<ApiResponse<Student>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}`, { headers: authHeaders() });
     const json = await response.json();
     if (!response.ok) return { success: false, error: json.error || "Student not found" };
     return { success: true, data: json };
@@ -159,7 +183,7 @@ export async function getStudent(id: number): Promise<ApiResponse<Student>> {
 // GET /api/v1/batches — returns all enrolment batches (used for dropdowns / filtering).
 export async function getBatches(): Promise<ApiResponse<Batch[]>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/batches`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/batches`, { headers: authHeaders() });
     const json = await response.json();
     if (!response.ok) return { success: false, error: json.error || "Failed to fetch batches" };
     return { success: true, data: json };
@@ -176,7 +200,7 @@ export async function updateStudent(
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ student: data }),
     });
     const json = await response.json();

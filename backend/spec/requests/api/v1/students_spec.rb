@@ -3,13 +3,24 @@
 require 'rails_helper'
 
 RSpec.describe 'Api::V1::Students', type: :request do
+  def auth_headers(user)
+    token = Warden::JWTAuth::UserEncoder.new.call(user, :user, nil).first
+    { "Authorization" => "Bearer #{token}" }
+  end
+
+  let(:user) { create(:user) }
   let(:batch) { create(:batch) }
   let(:student) { create(:student, batch: batch) }
 
   describe 'GET /api/v1/students' do
-    it 'returns all students' do
-      create_list(:student, 3, batch: batch)
+    it 'requires authentication' do
       get '/api/v1/students'
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'returns all students when authenticated' do
+      create_list(:student, 3, batch: batch)
+      get '/api/v1/students', headers: auth_headers(user)
       expect(response).to have_http_status(:ok)
       expect(JSON.parse(response.body).size).to eq(3)
     end
@@ -17,13 +28,13 @@ RSpec.describe 'Api::V1::Students', type: :request do
 
   describe 'GET /api/v1/students/:id' do
     it 'returns a specific student' do
-      get "/api/v1/students/#{student.id}"
+      get "/api/v1/students/#{student.id}", headers: auth_headers(user)
       expect(response).to have_http_status(:ok)
       expect(JSON.parse(response.body)['id']).to eq(student.id)
     end
 
     it 'returns 404 for non-existent student' do
-      get '/api/v1/students/99999'
+      get '/api/v1/students/99999', headers: auth_headers(user)
       expect(response).to have_http_status(:not_found)
     end
   end
@@ -47,7 +58,7 @@ RSpec.describe 'Api::V1::Students', type: :request do
         }
       }
       expect {
-        post '/api/v1/students', params: student_params
+        post '/api/v1/students', params: student_params, headers: auth_headers(user)
       }.to change(Student, :count).by(1)
       expect(response).to have_http_status(:created)
     end
@@ -59,7 +70,7 @@ RSpec.describe 'Api::V1::Students', type: :request do
           first_name: 'John'
         }
       }
-      post '/api/v1/students', params: student_params
+      post '/api/v1/students', params: student_params, headers: auth_headers(user)
       expect(response).to have_http_status(:unprocessable_entity)
     end
   end
