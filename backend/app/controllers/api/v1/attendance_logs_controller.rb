@@ -16,6 +16,8 @@ module Api
         logs = logs.where(present: params[:present])      if params[:present].present?
 
         render_success(logs.order(attendance_date: :desc))
+      rescue ArgumentError
+        render_error("Invalid date format", status: :bad_request, code: "INVALID_DATE")
       end
 
       def create

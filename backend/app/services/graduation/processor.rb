@@ -33,6 +33,9 @@ module Graduation
     rescue AASM::InvalidTransition => e
       @errors << "Cannot graduate student: #{e.message}"
       false
+    rescue ActiveRecord::RecordNotUnique
+      @errors << "Student already has a graduation record"
+      false
     rescue ActiveRecord::RecordInvalid => e
       @errors = e.record.errors.full_messages
       false

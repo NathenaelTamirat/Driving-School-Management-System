@@ -25,6 +25,14 @@ Rails.application.routes.draw do
       resources :batches, only: [ :index, :show, :create ]
       resources :license_categories, only: [ :index ]
       resources :students, only: [ :index, :show, :create ] do
+        # LMS module
+        get "lms_progress", to: "lms_progress#show"
+        resources :attendance_logs, only: [ :index, :create ]
+        resources :mock_tests, only: [ :index, :create ]
+
+        # Graduation module (one record per student → singular resource)
+        resource :graduation_record, only: [ :show, :create ]
+
         resources :exam_bookings, only: [ :index, :show, :create, :update ] do
           post :cancel, on: :member
           post :record_result, on: :member

@@ -2,14 +2,12 @@ require "rails_helper"
 
 RSpec.describe Graduation::Processor, type: :service do
   let(:student) { create(:student, status: "exam_eligible") }
+  # Built future-dated then marked completed via update_columns to satisfy the
+  # ExamBooking on:create future-date validation while still being a passed exam.
   let!(:passed_booking) do
-    create(:exam_booking,
-           student:        student,
-           exam_type:      "practical",
-           status:         "completed",
-           score:          60,
-           scheduled_date: 1.week.ago,
-           completed_at:   1.week.ago)
+    create(:exam_booking, student: student, exam_type: "practical").tap do |booking|
+      booking.update_columns(status: "completed", score: 60, completed_at: 1.week.ago)
+    end
   end
 
   subject(:processor) { described_class.new(student) }
