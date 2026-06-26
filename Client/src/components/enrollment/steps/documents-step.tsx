@@ -1,3 +1,14 @@
+// Documents step — the third page of the enrollment wizard.
+// Displays a list of required and optional document uploads as individual
+// rows. Each row shows a contextual icon (profile photo → ImageIcon,
+// yellow card → FileText, grade docs → GraduationCap, medical → Stethoscope)
+// and offers "Scan" and "Upload" buttons. Scanning is simulated (it just
+// shows a toast and waits 1.2s). Upload opens a file picker and validates
+// type/size constraints before saving to EnrollmentContext. The user cannot
+// proceed until all required documents (marked by requiredRows) are uploaded.
+// The getRowIcon() function returns JSX elements directly rather than
+// component types to avoid React hooks-statick-components lint warnings.
+
 "use client";
 
 import { useCallback, useRef, useState } from "react";
