@@ -1,3 +1,10 @@
+// shadcn/ui Progress component.
+// Wraps Radix Progress primitive for accessible progress indication.
+// Used in the enrollment wizard's stepper to show step completion and
+// in the student detail view for training progress bars (theory/practical
+// days completed). The indicator uses translateX to animate width changes
+// with a 300ms transition.
+
 "use client";
 
 import * as React from "react";
