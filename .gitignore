@@ -15,17 +15,28 @@ backend/config/master.key
 backend/config/credentials.yml.enc
 backend/config/credentials/
 
+# Local database config (not committed — use .env or template)
+backend/config/database.yml
+
 # Bundler
 backend/vendor/bundle/
+backend/.bundle/
 
 # Node / Yarn (if used in Rails assets)
 backend/node_modules/
 backend/.yarn-integrity
 backend/yarn-error.log
+node_modules/
 
 # ========================
-# Frontend (if added later)
+# Frontend
 # ========================
+Client/node_modules/
+Client/.next/
+Client/out/
+Client/.env
+Client/.env.*
+!Client/.env.example
 frontend/node_modules/
 frontend/.env
 frontend/.env.*
@@ -41,6 +52,7 @@ frontend/.nuxt/
 docs/frontendimplementation.md
 docs/Frontendimplementation.md
 docs/API_Documentation.MD
+docs/
 DOCS/
 
 # ========================
