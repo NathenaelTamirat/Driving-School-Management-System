@@ -18,6 +18,11 @@ module Api
         mock_test = @student.mock_tests.build(mock_test_params)
 
         if mock_test.save
+          # A passing mock may be the last requirement for the practical phase.
+          # Re-evaluate the transition here since the score just changed.
+          @student.reload
+          @student.start_practical! if @student.may_start_practical?
+
           render_success(mock_test, status: :created, message: "Mock test recorded successfully")
         else
           render_error("Failed to record mock test", errors: mock_test.errors.full_messages)
