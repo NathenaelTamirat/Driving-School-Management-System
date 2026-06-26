@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 module Lms
+  # Computes a student's training progress summary for the dashboard.
+  # Returns theory/practical completion percentages, mock test status,
+  # and a human-readable next-milestone hint. Used by LmsProgressController.
   class ProgressCalculator
     THEORY_REQUIRED    = 35
     PRACTICAL_REQUIRED = 52
