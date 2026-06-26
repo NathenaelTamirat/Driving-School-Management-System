@@ -2,6 +2,10 @@
 
 module Api
   module V1
+    # Authenticated controller for student graduation lifecycle.
+    # POST creates a GraduationRecord and triggers DossierTransferJob,
+    # which sends the student's file to the ERTA system for official licensing.
+    # GET returns the existing record if graduation was already processed.
     class GraduationRecordsController < BaseController
       before_action :set_student
 
