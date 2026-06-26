@@ -2,8 +2,12 @@
 
 module Api
   module V1
-    # Base for endpoints that REQUIRE a logged-in user. Plain ApplicationController
-    # (and the existing students/batches/exam_bookings controllers) stay public.
+    # Authenticated base controller.
+    # Endpoints inheriting from this class require a valid JWT (authenticate_user!).
+    # Provides standardized render_success / render_error envelopes for all
+    # authenticated endpoints and catches RecordNotFound / ParameterMissing.
+    # Public endpoints (students, batches, exam_bookings) inherit directly from
+    # ApplicationController instead.
     class BaseController < ApplicationController
       include Devise::Controllers::Helpers
 
