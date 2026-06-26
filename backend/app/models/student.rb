@@ -5,7 +5,8 @@ class Student < ApplicationRecord
   has_many :exam_bookings,   dependent: :destroy
   has_many :attendance_logs, dependent: :destroy
   has_many :mock_tests,      dependent: :destroy
-  has_many :invoices,        dependent: :destroy
+  has_many :invoices,         dependent: :destroy
+  has_many :license_upgrades, dependent: :destroy
   has_one  :graduation_record, dependent: :destroy
 
   validates :status, presence: true
