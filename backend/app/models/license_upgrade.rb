@@ -37,7 +37,7 @@ class LicenseUpgrade < ApplicationRecord
     update!(status: "approved")
   end
 
-  def reject!(reason: nil)
+  def reject!
     update!(status: "rejected")
   end
 end

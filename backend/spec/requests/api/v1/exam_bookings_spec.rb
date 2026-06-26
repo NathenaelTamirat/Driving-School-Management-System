@@ -23,7 +23,7 @@ RSpec.describe 'Api::V1::ExamBookings', type: :request do
       create_list(:exam_booking, 3, student: student)
       get "/api/v1/students/#{student.id}/exam_bookings", headers: auth_headers(user)
       expect(response).to have_http_status(:ok)
-      expect(JSON.parse(response.body).size).to eq(3)
+      expect(JSON.parse(response.body)['data'].size).to eq(3)
     end
   end
 
@@ -31,7 +31,7 @@ RSpec.describe 'Api::V1::ExamBookings', type: :request do
     it 'returns a specific exam booking' do
       get "/api/v1/students/#{student.id}/exam_bookings/#{exam_booking.id}", headers: auth_headers(user)
       expect(response).to have_http_status(:ok)
-      expect(JSON.parse(response.body)['id']).to eq(exam_booking.id)
+      expect(JSON.parse(response.body)['data']['id']).to eq(exam_booking.id)
     end
   end
 
@@ -64,7 +64,7 @@ RSpec.describe 'Api::V1::ExamBookings', type: :request do
         }
         post "/api/v1/students/#{student.id}/exam_bookings", params: exam_booking_params, headers: auth_headers(user)
         expect(response).to have_http_status(:forbidden)
-        expect(JSON.parse(response.body)['errors']).to include(/Theory training incomplete/)
+        expect(JSON.parse(response.body)['error']['details']).to include(/Theory training incomplete/)
       end
     end
   end

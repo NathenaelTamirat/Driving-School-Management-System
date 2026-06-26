@@ -52,7 +52,7 @@ RSpec.describe 'Api::V1::Students', type: :request do
     it 'returns a specific student' do
       get "/api/v1/students/#{student.id}", headers: auth_headers(user)
       expect(response).to have_http_status(:ok)
-      expect(JSON.parse(response.body)['id']).to eq(student.id)
+      expect(JSON.parse(response.body)['data']['id']).to eq(student.id)
     end
 
     it 'returns 404 for non-existent student' do

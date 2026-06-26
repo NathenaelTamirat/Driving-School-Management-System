@@ -8,6 +8,7 @@ A modular monolith driving school automation platform that manages student onboa
 
 - [Tech Stack](#tech-stack)
 - [Features](#features)
+- [Architecture](#architecture)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
 - [Getting Started / Installation & Local Development](#getting-started--installation--local-development)
@@ -155,7 +156,51 @@ A modular monolith driving school automation platform that manages student onboa
 
 ---
 
-## Project Structure
+## Architecture
+
+```mermaid
+graph TB
+    subgraph Client["Frontend — Next.js 16"]
+        FE["Next.js App<br/>src/app/ · src/components/"]
+    end
+
+    subgraph Server["Backend — Rails 8.1 API"]
+        RT["Router<br/>config/routes.rb"]
+        CT["Controllers<br/>app/controllers/api/v1/"]
+        SV["Service Objects<br/>app/services/{erta,graduation,lms,meklit,penalty}/"]
+        JB["Background Jobs<br/>app/jobs/ (Solid Queue)"]
+        ML["Mailers<br/>app/mailers/"]
+    end
+
+    subgraph Store["Data Layer"]
+        PG[("PostgreSQL 16")]
+        CA[("Solid Cache<br/>(PostgreSQL-backed)")]
+    end
+
+    subgraph Ext["External"]
+        ERTA[("ERTA / Meklit API")]
+        SMTP[("SMTP Email")]
+    end
+
+    FE -->|"HTTP JSON / JWT Auth"| RT
+    RT --> CT
+    CT --> SV
+    CT --> ML
+    SV --> PG
+    JB -.->|"Solid Queue"| PG
+    SV -->|"HTTParty"| ERTA
+    ML --> SMTP
+    CT -.->|"Reads"| CA
+
+    style Client fill:#e3f2fd,stroke:#1565c0
+    style Server fill:#e8f5e9,stroke:#2e7d32
+    style Store fill:#fff3e0,stroke:#e65100
+    style Ext fill:#fce4ec,stroke:#c62828
+```
+
+**Flow:** The Next.js frontend authenticates via JWT and sends API requests to the Rails backend. Controllers delegate business logic to service objects, which persist to PostgreSQL and communicate with the external ERTA/Meklit government API. Background jobs (Solid Queue) and cache (Solid Cache) share the same PostgreSQL database. Mailers send exam notifications via SMTP.
+
+---
 
 ```
 /
@@ -427,6 +472,24 @@ curl -X POST http://localhost:8080/api/v1/batches \
 # List hardcoded license categories
 curl http://localhost:8080/api/v1/license_categories
 ```
+
+### Interactive API Documentation (Swagger)
+
+An OpenAPI/Swagger 2.0 specification is available at `/api-docs` when the backend is running:
+
+```bash
+# After starting the server, open in your browser:
+open http://localhost:3001/api-docs
+```
+
+To regenerate `swagger.json` from the annotated specs:
+
+```bash
+cd backend
+rails rswag:specs:swaggerize
+```
+
+> **Note:** The API is in transition phase. Some controllers now return `{ success, data }` envelopes via `BaseController`, while legacy endpoints may still return raw JSON. The Swagger spec will be updated as endpoints are migrated.
 
 ### HTTP Status Codes
 

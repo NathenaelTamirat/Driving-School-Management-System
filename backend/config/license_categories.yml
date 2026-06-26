@@ -1,0 +1,40 @@
+# Ethiopian driving license categories, pricing, and requirements.
+# Used by LicenseCategoriesController to serve the /api/v1/license_categories endpoint.
+# Changing a price or requirement here takes effect on next app restart (no DB migration needed).
+
+categories:
+  - id: "B"
+    name: "Class B - Light Vehicles"
+    description: "Passenger cars, light trucks, and vans"
+    price: 5000
+    currency: "ETB"
+    age_requirement: 18
+    theory_hours: 35
+    practical_hours: 52
+
+  - id: "C"
+    name: "Class C - Medium Vehicles"
+    description: "Medium trucks and buses"
+    price: 7000
+    currency: "ETB"
+    age_requirement: 21
+    theory_hours: 35
+    practical_hours: 52
+
+  - id: "D"
+    name: "Class D - Heavy Vehicles"
+    description: "Heavy trucks and construction vehicles"
+    price: 10000
+    currency: "ETB"
+    age_requirement: 25
+    theory_hours: 35
+    practical_hours: 52
+
+  - id: "A"
+    name: "Class A - Motorcycles"
+    description: "Motorcycles and scooters"
+    price: 3000
+    currency: "ETB"
+    age_requirement: 16
+    theory_hours: 20
+    practical_hours: 30

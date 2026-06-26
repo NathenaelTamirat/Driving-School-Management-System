@@ -48,7 +48,7 @@ module Graduation
         student:              student,
         graduation_date:      Date.today,
         dossier_status:       "compiling",
-        transfer_destination: "Kifle Ketema Sub-City"
+        transfer_destination: student.subcity.presence || "Kifle Ketema Sub-City"
       )
     end
   end

@@ -4,14 +4,25 @@ module Meklit
   # HTTP client for communicating with the Meklit/ERTA API
   # Handles authentication, request formatting, and response parsing
   class MeklitApiClient
-    BASE_URL = ENV["MEKLIT_API_BASE_URL"] || "https://api.meklit.gov.et"
-    API_KEY = ENV["MEKLIT_API_KEY"]
-    API_VERSION = "v1"
-
     attr_reader :logger
 
     def initialize(logger: Rails.logger)
       @logger = logger
+    end
+
+    def base_url
+      ENV.fetch("MEKLIT_API_BASE_URL") do
+        raise "MEKLIT_API_BASE_URL must be set" unless Rails.env.test?
+        "http://localhost:9999"
+      end
+    end
+
+    def api_key
+      ENV["MEKLIT_API_KEY"]
+    end
+
+    def api_version
+      "v1"
     end
 
     # Submit a batch to ERTA for processing
@@ -44,7 +55,7 @@ module Meklit
 
     # Execute HTTP request with error handling
     def execute_request(method, endpoint, data = nil)
-      url = "#{BASE_URL}/api/#{API_VERSION}#{endpoint}"
+      url = "#{base_url}/api/#{api_version}#{endpoint}"
       headers = build_headers
 
       logger.info "[MeklitApiClient] #{method.upcase} #{url}"
@@ -71,7 +82,7 @@ module Meklit
         "Content-Type" => "application/json",
         "Accept" => "application/json"
       }
-      headers["Authorization"] = "Bearer #{API_KEY}" if API_KEY.present?
+      headers["Authorization"] = "Bearer #{api_key}" if api_key.present?
       headers
     end
 
