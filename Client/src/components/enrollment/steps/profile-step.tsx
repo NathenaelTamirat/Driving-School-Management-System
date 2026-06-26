@@ -1,3 +1,14 @@
+// Profile step — the first page of the enrollment wizard.
+// Collects personal info (name, phone, DOB, blood type), address (with
+// Ethiopian administrative divisions: woreda, kebele, subcity, city),
+// and emergency contact. All fields use react-hook-form with the
+// profileStepSchema Zod validator (see enrollment-validations.ts).
+// The phone input renders a +251 prefix badge on the left. A "Save Draft"
+// button persists the current profile (without files) to localStorage via
+// the EnrollmentProvider. The "Loading…" guard before draftLoaded ensures
+// the form is hydrated from localStorage before rendering to prevent
+// stale default values.
+
 "use client";
 
 import { useForm } from "react-hook-form";
