@@ -1,3 +1,10 @@
+// Visual step indicator for the enrollment wizard.
+// Renders 4 numbered circles connected by lines: Profile → Category → Documents → Payment.
+// Completed steps show a checkmark icon; the active step is highlighted in blue;
+// future steps show an outlined circle. The `variant` prop switches labels
+// between "profile" mode (default) and "enrollment" mode (with "Student Info"
+// as step 1), matching the two different entry points.
+
 "use client";
 
 import { Check } from "lucide-react";
