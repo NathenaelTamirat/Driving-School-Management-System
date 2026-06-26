@@ -2,14 +2,13 @@ require "rails_helper"
 
 RSpec.describe Graduation::EligibilityValidator, type: :service do
   let(:student) { create(:student, status: "exam_eligible") }
+  # ExamBooking validates scheduled_date is in the future on :create, so create
+  # with the factory's future date, then mark it completed via update_columns
+  # (bypasses validations) to simulate a finished, passed practical exam.
   let(:passed_booking) do
-    create(:exam_booking,
-           student:        student,
-           exam_type:      "practical",
-           status:         "completed",
-           score:          60,
-           scheduled_date: 1.week.ago,
-           completed_at:   1.week.ago)
+    create(:exam_booking, student: student, exam_type: "practical").tap do |booking|
+      booking.update_columns(status: "completed", score: 60, completed_at: 1.week.ago)
+    end
   end
 
   before { passed_booking }
