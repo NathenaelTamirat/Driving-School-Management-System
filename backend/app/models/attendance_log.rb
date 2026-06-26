@@ -11,6 +11,8 @@ class AttendanceLog < ApplicationRecord
 
   validates :attendance_date, presence: true
 
+  validates :present, inclusion: { in: [true, false] }
+
   validates :attendance_date,
             uniqueness: {
               scope: %i[student_id phase],
