@@ -29,6 +29,9 @@ Rails.application.routes.draw do
           post :cancel, on: :member
           post :record_result, on: :member
         end
+        resources :attendance_logs, only: [ :index, :create ]
+        resources :mock_tests, only: [ :index, :create ]
+        resource :lms_progress, only: [ :show ]
       end
     end
   end
