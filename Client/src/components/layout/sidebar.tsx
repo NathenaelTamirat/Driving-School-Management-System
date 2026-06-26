@@ -1,3 +1,9 @@
+// Application shell layout: sidebar navigation for the dashboard area.
+// Renders the DSAS brand mark and two top-level nav links (Dashboard, Students).
+// Active-route detection is done via usePathname(): root "/" is an exact match,
+// while "/students" uses startsWith so nested student routes stay highlighted.
+// Uses sidebar-specific CSS variables (--sidebar-*) defined in globals.css.
+
 "use client";
 
 import Link from "next/link";
