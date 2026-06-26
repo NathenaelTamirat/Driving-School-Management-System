@@ -2,6 +2,10 @@
 
 module Api
   module V1
+    # Authenticated controller for daily attendance logging.
+    # Supports filtering by phase (theory/practical), date, and presence status.
+    # Delegates recording to Lms::AttendanceRecorder, which also increments
+    # the student's day counters and drives the AASM state machine transitions.
     class AttendanceLogsController < BaseController
       before_action :set_student
 
