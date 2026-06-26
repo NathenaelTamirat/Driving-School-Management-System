@@ -1,3 +1,8 @@
+// shadcn/ui Label component.
+// Wraps Radix Label primitive for accessible form labeling.
+// The `peer-disabled` modifier automatically dims the label when
+// its associated form control is disabled (via the `peer` Tailwind pattern).
+
 import * as React from "react";
 import * as LabelPrimitive from "@radix-ui/react-label";
 import { cva, type VariantProps } from "class-variance-authority";
