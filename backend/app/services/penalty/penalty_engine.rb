@@ -4,7 +4,7 @@ module Penalty
   # Calculates and applies penalties for exam failures
   # Handles penalty rules and student account updates
   class PenaltyEngine
-    PENALTY_DAYS = 7 # Number of days penalty for failed exam
+    PENALTY_DAYS = 5 # Number of days penalty for failed exam (per ERTA regulation)
 
     attr_reader :student, :exam_booking, :logger
 
