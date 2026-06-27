@@ -428,6 +428,7 @@ export type Student = {
   status: string;
   verified: boolean;
   verified_at: string | null;
+  license_category: string | null;
   theory_days_completed: number;
   practical_days_completed: number;
   mock_test_score: number;

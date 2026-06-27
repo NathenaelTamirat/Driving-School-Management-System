@@ -67,6 +67,7 @@ module Api
           :email,
           :verified,
           :verified_at,
+          :license_category,
           :theory_days_completed,
           :practical_days_completed,
           :mock_test_score,

@@ -64,6 +64,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_140002) do
     t.string "kebele"
     t.date "last_attendance_date"
     t.string "last_name"
+    t.string "license_category"
     t.string "middle_name"
     t.integer "mock_test_score", default: 0
     t.datetime "penalty_end_date"
@@ -83,6 +84,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_140002) do
     t.string "woreda"
     t.index ["batch_id"], name: "index_students_on_batch_id"
     t.index ["document_id"], name: "index_students_on_document_id", unique: true
+    t.index ["license_category"], name: "index_students_on_license_category"
     t.index ["penalty_end_date"], name: "index_students_on_penalty_end_date"
     t.index ["student_id"], name: "index_students_on_student_id", unique: true
     t.index ["under_penalty"], name: "index_students_on_under_penalty"

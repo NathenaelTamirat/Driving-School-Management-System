@@ -55,6 +55,13 @@ const statusLabels: Record<string, string> = {
   graduated: "Graduated",
 };
 
+const LICENSE_CATEGORY_LABELS: Record<string, string> = {
+  auto: "Auto (B)",
+  motor: "Motorcycle (A)",
+  public1: "Public-1 (C1)",
+  drycargo1: "Dry Cargo-1 (C)",
+};
+
 type SortKey = "student_id" | "full_name" | "status";
 
 export default function StudentsPage() {
@@ -266,7 +273,11 @@ export default function StudentsPage() {
                         <Badge variant="warning">Unverified</Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-500">&mdash;</td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {s.license_category
+                        ? LICENSE_CATEGORY_LABELS[s.license_category] ?? s.license_category
+                        : "\u2014"}
+                    </td>
                   </tr>
                 ))
               )}
