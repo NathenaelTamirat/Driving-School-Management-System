@@ -28,7 +28,11 @@ import {
   type EnrollmentProfile,
   type EnrollmentDocumentKey,
   type UploadedDocument,
+  type EnrollmentFormData,
 } from "@/lib/enrollment-types";
+import { submitEnrollmentFormData } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 type EnrollmentContextValue = {
   state: EnrollmentState;
@@ -46,6 +50,10 @@ type EnrollmentContextValue = {
   loadDraft: () => boolean;
   clearDraft: () => void;
   resetEnrollment: () => void;
+  // New simplified form data
+  formData: EnrollmentFormData;
+  updateFormData: (data: Partial<EnrollmentFormData>) => void;
+  submitEnrollment: () => Promise<void>;
 };
 
 const EnrollmentContext = createContext<EnrollmentContextValue | null>(null);
@@ -62,6 +70,35 @@ type PersistedDraft = Omit<EnrollmentState, "documents"> & {
 export function EnrollmentProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<EnrollmentState>(INITIAL_ENROLLMENT_STATE);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const router = useRouter();
+
+  // New simplified form data state
+  const [formData, setFormData] = useState<EnrollmentFormData>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+    licenseCategory: "",
+    documents: [],
+    paymentMethod: "cash",
+    paymentNotes: "",
+  });
+
+  const updateFormData = useCallback((data: Partial<EnrollmentFormData>) => {
+    setFormData((prev) => ({ ...prev, ...data }));
+  }, []);
+
+  const submitEnrollment = useCallback(async () => {
+    const result = await submitEnrollmentFormData(formData);
+    if (result.success) {
+      toast.success("Student enrolled successfully!");
+      router.push("/students");
+    } else {
+      toast.error(result.error || "Failed to submit enrollment");
+    }
+  }, [formData, router]);
 
   const setStep = useCallback((step: number) => {
     setState((prev) => ({ ...prev, currentStep: step }));
@@ -176,6 +213,9 @@ export function EnrollmentProvider({ children }: { children: React.ReactNode }) 
       loadDraft,
       clearDraft,
       resetEnrollment,
+      formData,
+      updateFormData,
+      submitEnrollment,
     }),
     [
       state,
@@ -190,6 +230,9 @@ export function EnrollmentProvider({ children }: { children: React.ReactNode }) 
       loadDraft,
       clearDraft,
       resetEnrollment,
+      formData,
+      updateFormData,
+      submitEnrollment,
     ],
   );
 

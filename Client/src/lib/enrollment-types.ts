@@ -13,6 +13,23 @@
 import type { UploadSlot } from "@/lib/validations";
 import { UPLOAD_SLOTS } from "@/lib/validations";
 
+// Simplified form data shape for the multi-step enrollment wizard.
+// Uses generic field names (firstName, lastName, email, etc.) that map
+// to the backend's student_params. Coexists alongside the existing
+// EnrollmentProfile / EnrollmentState types for backward compatibility.
+export type EnrollmentFormData = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
+  address: string;
+  licenseCategory: string;
+  documents: File[];
+  paymentMethod: "cash" | "bank_transfer" | "other";
+  paymentNotes?: string;
+};
+
 // Four license categories match the Ethiopian driving licence tiers offered
 // by the school: private auto (B), motorcycle (A), public-transport minibus
 // (C1), and dry-cargo truck (C). Each entry drives the pricing card UI on

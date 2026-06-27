@@ -41,7 +41,7 @@ type ApiResponse<T = unknown> = {
   errors?: string[] | Record<string, string[]>;
 };
 
-import type { EnrollmentState } from "@/lib/enrollment-types";
+import type { EnrollmentState, EnrollmentFormData } from "@/lib/enrollment-types";
 import { UPLOAD_SLOTS } from "@/lib/validations";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -154,6 +154,62 @@ export async function createStudentFromEnrollment(
     ? buildEnrollmentFormData(state)
     : mapEnrollmentToStudentPayload(state);
   return createStudent(payload);
+}
+
+// ---------------------------------------------------------------------------
+// New simplified EnrollmentFormData pipeline
+// ---------------------------------------------------------------------------
+
+// Maps the simplified EnrollmentFormData into the flat payload the backend
+// expects.  Extra fields (email, phone, license_category, payment_method)
+// are included so the backend can permit them later.
+export function mapEnrollmentFormDataToPayload(data: EnrollmentFormData) {
+  return {
+    batch_id: DEFAULT_BATCH_ID,
+    student_id: generateId("STU", data.phone),
+    document_id: generateId("DOC", data.phone),
+    first_name: data.firstName.trim(),
+    last_name: data.lastName.trim(),
+    date_of_birth: data.dateOfBirth,
+    address: data.address.trim(),
+    // Extra fields — the backend may permit these in future
+    email: data.email.trim(),
+    phone: data.phone.trim(),
+    license_category: data.licenseCategory,
+    payment_method: data.paymentMethod,
+    payment_notes: data.paymentNotes?.trim() ?? "",
+  };
+}
+
+// Builds a multipart/form-data request from the simplified form data.
+// String fields are appended as `student[key]=value` and files are
+// appended as `student[profile_photo]`, `student[yellow_card]`, etc.
+// so the Rails backend can pick them up via params[:student][...].
+export function buildFormDataFromEnrollmentFormData(
+  data: EnrollmentFormData,
+): FormData {
+  const formData = new FormData();
+  const payload = mapEnrollmentFormDataToPayload(data);
+
+  Object.entries(payload).forEach(([key, value]) => {
+    formData.append(`student[${key}]`, String(value));
+  });
+
+  // Attach each uploaded file to its respective slot
+  // (backend expects keys like profile_photo, yellow_card, etc.)
+  data.documents.forEach((file, index) => {
+    formData.append(`student[document_${index}]`, file);
+  });
+
+  return formData;
+}
+
+// POST the simplified EnrollmentFormData to /api/v1/students.
+export async function submitEnrollmentFormData(
+  data: EnrollmentFormData,
+): Promise<ApiResponse> {
+  const formData = buildFormDataFromEnrollmentFormData(data);
+  return createStudent(formData);
 }
 
 // GET /api/v1/students — returns the full student list.
