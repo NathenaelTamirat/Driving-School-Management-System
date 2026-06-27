@@ -1,11 +1,3 @@
-// Top-level enrollment wizard orchestrator.
-// Renders the four-step flow: Profile → Category → Documents → Payment.
-// Delegates each step to its own component and manages step transitions
-// via the EnrollmentContext.setStep() method. The header changes appearance
-// on step 1 (showing DSAS branding with a cancel link) versus subsequent
-// steps (showing "Exit Enrollment" back-link with a running total).
-// The "Current Total" badge updates reactively as the user picks a category.
-
 "use client";
 
 import Link from "next/link";
@@ -17,14 +9,24 @@ import { ProfileStep } from "@/components/enrollment/steps/profile-step";
 import { CategoryStep } from "@/components/enrollment/steps/category-step";
 import { DocumentsStep } from "@/components/enrollment/steps/documents-step";
 import { PaymentStep } from "@/components/enrollment/steps/payment-step";
-import {
-  calculateEnrollmentTotal,
-  formatEtb,
-} from "@/lib/enrollment-types";
+import { REGISTRATION_FEE, formatEtb } from "@/lib/enrollment-types";
 
 export function EnrollmentWizard() {
-  const { state, setStep } = useEnrollment();
-  const total = calculateEnrollmentTotal(state.categoryId);
+  const { state, setStep, formData } = useEnrollment();
+
+  const stepValidity: Record<number, boolean> = {
+    1: Boolean(
+      formData.firstName &&
+        formData.lastName &&
+        formData.email &&
+        formData.phone &&
+        formData.dateOfBirth &&
+        formData.address,
+    ),
+    2: Boolean(formData.licenseCategory),
+    3: formData.documents.length > 0,
+    4: Boolean(formData.paymentMethod),
+  };
 
   const titles: Record<number, { title: string; subtitle: string }> = {
     1: {
@@ -82,9 +84,9 @@ export function EnrollmentWizard() {
           </div>
           {state.currentStep >= 2 && (
             <div className="text-right">
-              <p className="text-sm text-slate-500">Current Total</p>
+              <p className="text-sm text-slate-500">Registration Fee</p>
               <p className="text-xl font-bold text-[#2563eb]">
-                ETB {formatEtb(total)}
+                ETB {formatEtb(REGISTRATION_FEE)}
               </p>
             </div>
           )}
@@ -104,6 +106,7 @@ export function EnrollmentWizard() {
         <EnrollmentStepper
           currentStep={state.currentStep}
           variant={state.currentStep === 1 ? "profile" : "enrollment"}
+          stepValidity={stepValidity}
         />
       </div>
 

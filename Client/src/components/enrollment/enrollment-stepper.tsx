@@ -1,13 +1,6 @@
-// Visual step indicator for the enrollment wizard.
-// Renders 4 numbered circles connected by lines: Profile → Category → Documents → Payment.
-// Completed steps show a checkmark icon; the active step is highlighted in blue;
-// future steps show an outlined circle. The `variant` prop switches labels
-// between "profile" mode (default) and "enrollment" mode (with "Student Info"
-// as step 1), matching the two different entry points.
-
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
@@ -20,11 +13,13 @@ const STEPS = [
 type EnrollmentStepperProps = {
   currentStep: number;
   variant?: "profile" | "enrollment";
+  stepValidity?: Record<number, boolean>;
 };
 
 export function EnrollmentStepper({
   currentStep,
   variant = "enrollment",
+  stepValidity = {},
 }: EnrollmentStepperProps) {
   const labels =
     variant === "profile"
@@ -41,6 +36,7 @@ export function EnrollmentStepper({
       {labels.map((step, index) => {
         const isCompleted = currentStep > step.number;
         const isActive = currentStep === step.number;
+        const isValid = stepValidity[step.number] !== false;
 
         return (
           <div key={step.number} className="flex items-center">
@@ -48,21 +44,26 @@ export function EnrollmentStepper({
               <div
                 className={cn(
                   "flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-colors",
-                  isCompleted && "bg-[#2563eb] text-white",
+                  isCompleted && isValid && "bg-[#2563eb] text-white",
+                  isCompleted && !isValid && "bg-amber-500 text-white",
                   isActive && "bg-[#2563eb] text-white",
                   !isCompleted &&
                     !isActive &&
                     "border-2 border-slate-200 bg-white text-slate-400",
                 )}
               >
-                {isCompleted ? <Check className="h-5 w-5" /> : step.number}
+                {isCompleted && isValid && <Check className="h-5 w-5" />}
+                {isCompleted && !isValid && <AlertCircle className="h-5 w-5" />}
+                {!isCompleted && step.number}
               </div>
               <span
                 className={cn(
                   "text-xs font-medium sm:text-sm",
-                  isActive || isCompleted
+                  isActive || (isCompleted && isValid)
                     ? "text-[#2563eb]"
-                    : "text-slate-400",
+                    : isCompleted && !isValid
+                      ? "text-amber-600"
+                      : "text-slate-400",
                 )}
               >
                 {step.label}

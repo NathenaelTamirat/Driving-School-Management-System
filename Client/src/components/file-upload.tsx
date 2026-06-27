@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { UploadSlot, StudentFormValues } from "@/lib/validations";
 
-type UploadedFile = {
+export type UploadedFile = {
   file: File;
   preview: string | null;
   type: "image" | "pdf" | "other";
