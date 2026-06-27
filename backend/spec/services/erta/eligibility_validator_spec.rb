@@ -15,6 +15,14 @@ RSpec.describe ERTA::EligibilityValidator, type: :service do
           practical_days_completed: 52,
           mock_test_score: 80
         )
+        # Attach required documents for eligibility
+        %w[profile_photo yellow_card grade_8 grade_10 grade_12].each do |doc|
+          student.send(doc).attach(
+            io: StringIO.new("dummy #{doc} content"),
+            filename: "#{doc}.jpg",
+            content_type: 'image/jpeg'
+          )
+        end
         validator = described_class.new(student)
         expect(validator.call).to be true
         expect(validator.errors).to be_empty

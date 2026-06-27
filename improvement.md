@@ -1,928 +1,520 @@
-# Production Readiness Report
-## Driving School Management System
+# Documentation vs Implementation Gap Analysis
+## Driving School Automation System
 
-**Generated:** 2026-06-26  
-**Codebase snapshot:** `codebundle.md` (232 files, generated 2026-06-26T06:46:22)  
-**Analyst:** Senior Software Engineer & DevOps Specialist
-
----
-
-## Table of Contents
-
-1. [Technology & Architecture Overview](#1-technology--architecture-overview)
-2. [Inspection Scorecard](#2-inspection-scorecard)
-3. [1 · Critical Security Issues](#3-critical-security-issues)
-4. [2 · Reliability & Stability](#4-reliability--stability)
-5. [3 · Configuration & Environment Hardening](#5-configuration--environment-hardening)
-6. [4 · Performance Optimizations](#6-performance-optimizations)
-7. [5 · Testing Gaps](#7-testing-gaps)
-8. [6 · CI/CD & Operational Readiness](#8-cicd--operational-readiness)
-9. [7 · Documentation Deficiencies](#9-documentation-deficiencies)
-10. [8 · Code Quality & Maintainability](#10-code-quality--maintainability)
-11. [What Passes](#11-what-passes)
+**Generated:** 2026-06-27  
+**Codebase:** Driving-School-Management-System (338 files)  
+**Documentation Source:** Complete Software Design & Architecture Documentation (Sections 1–17)
 
 ---
 
-## 1. Technology & Architecture Overview
+## Phase 3.1 – Summary
 
-| Layer | Technology |
+| Metric | Count |
 |---|---|
-| **Backend** | Ruby 4.0.1 · Rails 8.1.3 (API-only mode) |
-| **Database** | PostgreSQL 16 |
-| **Background Jobs** | Solid Queue (in-process via Puma plugin) |
-| **Caching** | Solid Cache (PostgreSQL-backed) |
-| **Auth** | Devise 5.0.4 + devise-jwt 0.13.0 (Denylist strategy) |
-| **Authorization** | Pundit |
-| **External API** | HTTParty → ERTA / Meklit government API |
-| **Frontend** | Next.js 15 (TypeScript), shadcn/ui, Tailwind CSS |
-| **Deployment** | Kamal 2.11.0 + Docker (multi-stage production image) |
-| **CI/CD** | GitHub Actions (two separate workflow files) |
-
-**Structure:** Backend-frontend monorepo split into `backend/` (Rails API) and `Client/` (Next.js). Single-server deployment via Kamal/Docker Compose. No microservices.
-
-**Entry points:**
-- HTTP API: Puma → Rails router → `api/v1/*`
-- Background jobs: Solid Queue supervisor inside Puma (`SOLID_QUEUE_IN_PUMA=1`)
-- Health check: `GET /up`
-- Scheduled jobs: `config/recurring.yml` (SolidQueue job cleanup only)
-
-**Domain:** Ethiopian driving-school management — student enrolment, LMS attendance, mock tests, exam booking, ERTA/government batch submission, graduation, invoicing, payroll. Tightly coupled to Ethiopian Road Transport Authority (ERTA) regulatory rules.
+| **Total documented features / requirements identified** | 54 |
+| **Fully implemented** | 28 |
+| **Partially implemented** | 14 |
+| **Completely missing** | 12 |
 
 ---
 
-## 2. Inspection Scorecard
-
-| Area | Status |
-|---|---|
-| Password hashing (bcrypt via Devise) | ✅ OK |
-| JWT authentication | ✅ OK (Denylist strategy) |
-| API authorization (Pundit) | ⚠️ Needs Improvement — only `UsersController` enforces it; students/batches/exams are unprotected |
-| Input validation (strong parameters, model validations) | ✅ OK |
-| CSRF/XSS protection | ✅ OK (API-only; CSRF not applicable) |
-| SQL injection prevention (ActiveRecord ORM) | ✅ OK |
-| HTTPS enforcement | ❌ Missing — `force_ssl` commented out in `production.rb` |
-| Secrets management | ⚠️ Needs Improvement — JWT secret has good fallback; MEKLIT_API_KEY in env is good but missing from `.env.example` |
-| CORS | ❌ Missing — wildcard `origins "*"` |
-| Host header protection | ❌ Missing — `config.hosts` commented out in `production.rb` |
-| Dependency vulnerability scanning | ✅ OK (bundler-audit + brakeman in CI) |
-| Error handling | ⚠️ Needs Improvement — `BaseController` controllers handled; non-BaseController ones return raw 500 on unhandled exceptions |
-| Database connection pooling | ✅ OK (Puma + ActiveRecord pool) |
-| Graceful shutdown | ✅ OK (Puma handles SIGTERM) |
-| Health check endpoint | ✅ OK (`/up`) |
-| Retries for transient failures | ⚠️ Needs Improvement — Redis-based retry counter silently broken |
-| Structured logging | ✅ OK (tagged logging with request_id in production) |
-| Metrics / alerting | ❌ Missing — no Prometheus, no APM |
-| Centralised error tracking | ❌ Missing — no Sentry/Bugsnag |
-| DB indexes | ✅ OK for critical paths |
-| Pagination | ❌ Missing on `students` and `batches` |
-| Caching strategies | ⚠️ Needs Improvement — Solid Cache configured but unused |
-| Environment variables (no hard-coded values) | ⚠️ Needs Improvement — several placeholders remain |
-| Unit tests (models, services) | ✅ OK (good coverage) |
-| Integration/request tests | ⚠️ Needs Improvement — 4 controllers untested |
-| Frontend tests | ❌ Missing — zero test infrastructure |
-| CI runs tests automatically | ⚠️ Needs Improvement — backend's own CI runs minitest, not RSpec |
-| Reproducible builds | ⚠️ Needs Improvement — `package-lock=false` in `.npmrc` |
-| Docker image | ✅ OK (multi-stage, non-root user) |
-| Database migration in CI | ✅ OK |
-| Zero-downtime deployment | ✅ OK (Kamal rolling deploy) |
-| README / setup docs | ✅ OK |
-| OpenAPI / Swagger spec | ❌ Missing |
-| Architecture diagram | ❌ Missing |
-| License file | ⚠️ README says MIT; LICENSE file may not exist |
+## Phase 3.2 – Detailed Gap Report
 
 ---
 
-## 3. Critical Security Issues
+### Domain: Student Lifecycle & Data Model
 
-### SEC-1 · CORS wildcard allows any origin to call the API
-🔴 **Critical** · `backend/config/initializers/cors.rb:5`
+---
 
-```ruby
-# CURRENT — dangerous
-origins "*"
-resource "*", headers: :any, methods: [ :get, :post, :put, :patch, :delete, :options, :head ]
-```
+#### GAP-01 · Student `update` endpoint is documented but missing from the controller
 
-**Risk:** Any website can make authenticated cross-origin requests on behalf of a logged-in user. For a government-adjacent system handling personal data this is unacceptable.
+- **Feature:** Student data management (Admin/Clerk role)  
+- **Category:** API  
+- **Status:** `Missing`  
+- **Documentation reference:** `Architecture Requirements §4`, `Architecture Context §3` — *"Clerks must handle student registration, payments, and exam booking."*  `Architecture Security §8` — *"Clerk Role: Restricts capabilities to handling student registration, processing invoice payments."*  
+- **Source evidence:**  
+  - `backend/app/controllers/api/v1/students_controller.rb` — only `index, show, create` are implemented. No `update` action.  
+  - `backend/config/routes.rb` line 8750 — `resources :students, only: [ :index, :show, :create ]` — `update` is not in the `only` list.  
+  - `backend/app/policies/student_policy.rb` — `update?` method exists (grants admin/clerk), meaning authorization was planned but the controller action and route were never created.  
+- **Priority:** **High** — clerks cannot edit student information after registration; critical for data correction workflows.  
+- **Effort:** Low — service object pattern already established; add `update` to route, implement `update` action in controller using `StudentPolicy#update?`.
 
-**Fix:**
-```ruby
-Rails.application.config.middleware.insert_before 0, Rack::Cors do
-  allow do
-    # List every allowed origin explicitly.
-    origins ENV.fetch("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+---
 
-    resource "/api/*",
-      headers: :any,
-      methods: [ :get, :post, :put, :patch, :delete, :options, :head ],
-      credentials: true,
-      max_age: 86400
+#### GAP-02 · Student `identification_document` type field missing from database
+
+- **Feature:** Student Data Model — `identification_document` column  
+- **Category:** Database  
+- **Status:** `Missing`  
+- **Documentation reference:** `Software Database Design §11` — *"`identification_document`: National ID, Kebele ID, Passport, Birth Certificate"*  
+- **Source evidence:**  
+  - `backend/db/migrate/20260623190500_add_student_details.rb` — adds `student_id`, `document_id`, `first_name`, `middle_name`, `last_name`, `date_of_birth`, `blood_type`, and address fields. No `identification_document` column.  
+  - No subsequent migration adds this column. The field that exists (`document_id`) stores the *ID number*, not the *type* of document.  
+- **Priority:** **High** — required for ERTA submission (different identification types have different validation rules).  
+- **Effort:** Low — add a migration, update strong parameters and model.
+
+---
+
+#### GAP-03 · Student `eye_acuity_test` field missing from database
+
+- **Feature:** Student Data Model — `eye_acuity_test` column  
+- **Category:** Database  
+- **Status:** `Missing`  
+- **Documentation reference:** `Software Database Design §11` — *"`eye_acuity_test`: (String)"* listed as a required student column.  
+- **Source evidence:** No migration among the 22 migration files adds an `eye_acuity_test` column to the `students` table.  
+- **Priority:** **Medium** — ERTA registration typically requires visual acuity screening.  
+- **Effort:** Low — single migration + model attribute.
+
+---
+
+#### GAP-04 · Student `meklit_approval_date` field missing from database
+
+- **Feature:** Student Data Model — `meklit_approval_date` column  
+- **Category:** Database  
+- **Status:** `Missing`  
+- **Documentation reference:** `Software Database Design §11` — *"`meklit_approval_date`: (DateTime)"*; `Architecture Requirements §4` — *"The Meklit module must manage… 15-day cycle management."*  
+- **Source evidence:** No migration adds `meklit_approval_date` to the `students` table. `Meklit::ResponseHandler` (line 6138) sets `status: "approved"` on the batch and updates students to `graduated`, but records no per-student approval date.  
+- **Priority:** **Medium** — audit trail for regulatory compliance.  
+- **Effort:** Low — migration + update in `ResponseHandler#handle_approval`.
+
+---
+
+#### GAP-05 · Student `education_level` field missing from the students table
+
+- **Feature:** Student Data Model — `education_level`  
+- **Category:** Database  
+- **Status:** `Missing`  
+- **Documentation reference:** `Software Database Design §11` — *"`education_level`: 4th Grade Certificate, 10th Grade Certificate"*  
+- **Source evidence:** No migration adds `education_level` to `students`. The `courses` table has `min_education_level` (a threshold for the course), but no per-student field records the education credential the student submitted.  
+- **Priority:** **Medium** — needed for Meklit export payload and eligibility validation.  
+- **Effort:** Low.
+
+---
+
+#### GAP-06 · Student `n_number` (government ID) missing from the `students` table
+
+- **Feature:** Student Data Model — `n_number`  
+- **Category:** Database  
+- **Status:** `Missing`  
+- **Documentation reference:** `Software Database Design §11` — *"`n_number`: (String)"* listed directly under `students`. `Architecture Data Model §12` — *"Official government testing ID known as the n-number which serves as the unique key for all external coordination."*  
+- **Source evidence:** The `students` table has no `n_number` column in any migration. The field exists in `erta_exam_bookings` (`20260623191000_create_exam_bookings.rb`), but the architecture documentation explicitly places this field on the `students` record as a persistent student identifier.  
+- **Priority:** **High** — the `MeklitApiClient` and ERTA booking flow require this field on the student to coordinate with the government portal.  
+- **Effort:** Low — migration + update `Meklit::PayloadGenerator` to read from student.
+
+---
+
+#### GAP-07 · Batch `export_payload` JSONB column missing
+
+- **Feature:** Database — `batches` table  
+- **Category:** Database  
+- **Status:** `Missing`  
+- **Documentation reference:** `Software Database Design §11` — *"`export_payload`: JSONB format"* listed as a column on the `batches` table. `Architecture Data Model §12` — *"Student count summaries for the automated Meklit portal transmission packages."*  
+- **Source evidence:** `backend/db/migrate/20260619155515_create_batches.rb` — creates `name`, `status`, `submitted_at`, `approved_at`, `rejection_reason`. No `export_payload` JSONB column. No subsequent migration adds it.  `Meklit::PayloadGenerator` generates the payload dynamically but it is never persisted to the batch record.  
+- **Priority:** **Medium** — without persisting the payload, there is no audit trail of what was sent to ERTA and retries must regenerate it.  
+- **Effort:** Low — single migration; update `Meklit::BatchingService` to store the payload after generation.
+
+---
+
+### Domain: ERTA Engine
+
+---
+
+#### GAP-08 · Penalty period is 7 days in code vs 5 days in documentation
+
+- **Feature:** ERTA Engine — Penalty System  
+- **Category:** Business Logic  
+- **Status:** `Partially Implemented`  
+- **Documentation reference:** `Architecture Context §3` — *"external penalty rules requiring 300 ETB and a 5-day remedial period upon exam failure."* `Architecture Requirements §4` — *"The ERTA Engine must enforce a penalty system requiring 300 ETB and a 5-day remedial training upon exam failure."*  
+- **Source evidence:** `backend/app/services/penalty/penalty_engine.rb` line 6243 — `PENALTY_DAYS = 7`. Additionally, `Finance::PenaltyEngine` (a separate file at `backend/app/services/finance/penalty_engine.rb`) calculates penalty differently and does not enforce the documented 300 ETB flat fee from `Invoice::MILESTONE_TYPES[:government_penalty]`.  
+- **Priority:** **High** — business rule discrepancy; incorrect penalty period will cause regulatory non-compliance.  
+- **Effort:** Low — change constant; reconcile the two separate `PenaltyEngine` classes.
+
+---
+
+#### GAP-09 · Payment fence (exam booking lock) before re-booking is not implemented
+
+- **Feature:** ERTA Engine — "lock exam bookings until penalty paid"  
+- **Category:** API / Business Logic  
+- **Status:** `Missing`  
+- **Documentation reference:** `Architecture Requirements §4` — *"The system must generate penalty invoices and lock exam bookings until paid."*  
+- **Source evidence:** `backend/app/controllers/api/v1/exam_bookings_controller.rb`, method `validate_eligibility` (line 2187) — delegates to `ERTA::EligibilityValidator`, which checks status, training days, mock test score, and documents (`erta/eligibility_validator.rb` lines 4353–4401). It does **not** check for an unpaid penalty invoice before allowing a new booking.  
+- **Priority:** **High** — core business rule; students can currently book exams while a penalty invoice is outstanding.  
+- **Effort:** Medium — add an invoice status check inside `ERTA::EligibilityValidator` or `ExamBookingsController#validate_eligibility`.
+
+---
+
+### Domain: LMS Module
+
+---
+
+#### GAP-10 · `fetch_last_attendance_date` is a TODO stub in the Finance Penalty Engine
+
+- **Feature:** LMS / Finance — attendance breach penalty trigger  
+- **Category:** Business Logic  
+- **Status:** `Partially Implemented`  
+- **Documentation reference:** `Architecture Requirements §4` — *"The system must run a daily monitor to check 35-day and 52-day training completion and flag students approaching deadlines."*  
+- **Source evidence:** `backend/app/services/finance/penalty_engine.rb` lines 5195–5204 —  
+  ```ruby
+  def fetch_last_attendance_date
+    # TODO: Replace with actual Attendance model query when implemented
+    # Attendance.where(student: student).order(date: :desc).first&.date
+    # Mock implementation - replace when Attendance model is available
+    student.updated_at.to_date
   end
-end
-```
-
-Add `ALLOWED_ORIGINS=https://yourdomain.com` to the production environment.
-
----
-
-### SEC-2 · Four core controllers have NO authentication — the entire student/exam workflow is public
-🔴 **Critical** · Multiple files
-
-`StudentsController`, `BatchesController`, `ExamBookingsController`, and `LicenseCategoriesController` all inherit from `ApplicationController`, **not** `BaseController`. `BaseController` is the only class that calls `before_action :authenticate_user!`. This means:
-
-- Anyone on the internet can enumerate all students: `GET /api/v1/students`
-- Anyone can create, view, or modify student records
-- Anyone can create, cancel, or record results for exam bookings (including applying penalties)
-- Anyone can read or create batches
-
-**Affected files:**
-- `backend/app/controllers/api/v1/students_controller.rb:9` — `class StudentsController < ApplicationController`
-- `backend/app/controllers/api/v1/batches_controller.rb:11` — `class BatchesController < ApplicationController`
-- `backend/app/controllers/api/v1/exam_bookings_controller.rb:9` — `class ExamBookingsController < ApplicationController`
-- `backend/app/controllers/api/v1/license_categories_controller.rb:9` — `class LicenseCategoriesController < ApplicationController`
-
-The frontend `api.ts` confirms this — not a single API call sends an `Authorization` header.
-
-**Fix:** Change each controller to inherit from `BaseController` and add appropriate role checks:
-
-```ruby
-# backend/app/controllers/api/v1/students_controller.rb
-class StudentsController < BaseController   # was: ApplicationController
-```
-
-```ruby
-# backend/app/controllers/api/v1/batches_controller.rb
-class BatchesController < BaseController
-```
-
-```ruby
-# backend/app/controllers/api/v1/exam_bookings_controller.rb
-class ExamBookingsController < BaseController
-```
-
-Then add `before_action :authorize_role!` (or Pundit `authorize`) where needed, and update the frontend `api.ts` to include the JWT in every request:
-
-```typescript
-const response = await fetch(`${API_BASE_URL}/api/v1/students`, {
-  headers: {
-    "Authorization": `Bearer ${getToken()}`,
-    "Content-Type": "application/json",
-  },
-});
-```
+  ```
+  The method currently returns `student.updated_at` — a meaningless fallback — instead of querying the `attendance_logs` table.  
+- **Priority:** **High** — the attendance breach penalty trigger produces incorrect dates, potentially issuing false penalties or missing real breaches.  
+- **Effort:** Low — replace the stub body with `AttendanceLog.where(student: student).order(attendance_date: :desc).first&.attendance_date`.
 
 ---
 
-### SEC-3 · `DossierTransferJob` is called but never defined — graduation crashes at runtime
-🔴 **Critical** · `backend/app/services/graduation/processor.rb:9`
-
-```ruby
-DossierTransferJob.perform_later(student.id)  # Line 9 of processor.rb
-```
-
-No file `app/jobs/dossier_transfer_job.rb` exists anywhere in the codebase. Calling `graduation!` on any student will raise `NameError: uninitialized constant DossierTransferJob` in production. The spec at `spec/services/graduation/processor_spec.rb` sidesteps this with `allow(DossierTransferJob).to receive(:perform_later)`, which masks the crash.
-
-**Fix — Option A (stub until implemented):**
-```ruby
-# backend/app/jobs/dossier_transfer_job.rb
-class DossierTransferJob < ApplicationJob
-  queue_as :default
-
-  def perform(student_id)
-    Rails.logger.warn "[DossierTransferJob] Not yet implemented for student #{student_id}"
-    # TODO: implement dossier PDF generation and transfer
-  end
-end
-```
-
-**Fix — Option B (defer the job):**
-Remove the `perform_later` call from `processor.rb` and log a warning until the job is ready.
+### Domain: Graduation Module
 
 ---
 
-### SEC-4 · Student emails are always sent to a fabricated placeholder address
-🔴 **Critical** · `backend/app/controllers/api/v1/exam_bookings_controller.rb:55–59`, `backend/app/services/meklit/response_handler.rb:68–71`
+#### GAP-11 · `DossierTransferJob` is a stub — no actual file transfer logic
 
-```ruby
-# CURRENT — fabricated address, no real email ever sent
-student_email = "#{@student.student_id}@example.com"
-MeklitMailer.exam_booking(@exam_booking, student_email).deliver_later
-```
-
-The `Student` model has no `email` column. Every email notification — exam bookings, exam results, approval notifications — is sent to `STU001@example.com` and similar non-existent addresses. Students receive nothing.
-
-**Fix:** Add an email column to the students table:
-
-```ruby
-# New migration
-add_column :students, :email, :string
-add_index  :students, :email, unique: true
-```
-
-Then permit it in `StudentsController#student_params` and replace the placeholder:
-```ruby
-student_email = @student.email.presence || raise("Student #{@student.student_id} has no email")
-```
+- **Feature:** Graduation Module — Dossier file transfer to Kifle Ketema  
+- **Category:** Business Logic / Background Job  
+- **Status:** `Partially Implemented`  
+- **Documentation reference:** `Architecture Requirements §4` — *"The Graduation module must compile physical and digital dossiers and handle file transfers to Kifle Ketema."* `System Design §1` — *"Dossier Transfer: Delivery of physical and digital records to Kifle Ketema based on residential sub-city registration."*  
+- **Source evidence:** `backend/app/jobs/dossier_transfer_job.rb` — 535 bytes, the smallest job file in the project (all other jobs are 1,449–2,174 bytes). At this size the job contains, at most, a class stub with no actual transfer logic.  `Graduation::Processor` (lines 5428–5453) calls `DossierTransferJob.perform_later(student.id)` and transitions the `GraduationRecord` to `dossier_status: "compiling"`, but no code advances the status to `"ready"` or `"transferred"`.  
+- **Priority:** **High** — the graduation flow is broken end-to-end; the dossier never gets transferred.  
+- **Effort:** High — requires integration with external Kifle Ketema system or file delivery mechanism (email, SFTP, API). Define the actual transfer protocol first.
 
 ---
 
-### SEC-5 · File uploads are silently discarded — ActiveStorage is not implemented
-🔴 **Critical** · `backend/app/controllers/api/v1/students_controller.rb:38–48`
-
-```ruby
-def handle_file_uploads
-  # TODO: Implement ActiveStorage for persistent file storage
-  # For now, files are stored in memory and logged
-  file_fields.each do |field|
-    if params[:student][field].present?
-      Rails.logger.info "[StudentsController] Received file upload: #{field}..."
-      # Files will be stored in memory until ActiveStorage is implemented
-    end
-  end
-end
-```
-
-Documents (profile photo, yellow card, academic certificates, medical certificate) are required for ERTA submission. They are accepted by the API, logged, and then silently dropped on every request. This means the qualification validator's document check is also a no-op — `QualificationValidator#validate_documents` is commented out specifically because files are never persisted.
-
-**Fix:** Implement ActiveStorage attachments on the `Student` model:
-
-```ruby
-# backend/app/models/student.rb
-has_one_attached  :profile_photo
-has_one_attached  :yellow_card
-has_one_attached  :grade_8
-has_one_attached  :grade_10
-has_one_attached  :grade_12
-has_one_attached  :medical
-```
-
-In production, configure an S3-compatible bucket in `config/storage.yml` and set `config.active_storage.service = :amazon` in `production.rb`.
+### Domain: Finance Module
 
 ---
 
-## 4. Reliability & Stability
+#### GAP-12 · No API endpoint or route exposes payroll entries to instructors
 
-### REL-1 · `Redis.current` called without a Redis gem — retry counter is permanently broken
-🟠 **High** · `backend/app/jobs/meklit_batch_export_job.rb:43`
-
-```ruby
-retry_count = Redis.current.incr("meklit_retry:#{batch_id}") rescue 1
-```
-
-`redis` is not in the `Gemfile`. At runtime, `Redis` is an uninitialized constant. The `rescue 1` swallows the `NameError` and always returns `1`, meaning every job attempt sees `retry_count = 1`. The retry cap of 5 will never be reached: the job retries indefinitely for the lifetime of the system.
-
-**Fix:** Add the redis gem and configure it, or replace with a database-backed counter:
-
-```ruby
-# Gemfile
-gem "redis", "~> 5.0"
-```
-
-Or use a database-backed approach with ActiveRecord, which is already available:
-
-```ruby
-def schedule_retry(batch_id)
-  batch = Batch.find(batch_id)
-  retry_count = batch.retry_count.to_i + 1
-  return if retry_count > MAX_RETRIES
-  batch.update_column(:retry_count, retry_count)
-  delay = [5 * (2 ** (retry_count - 1)), 60].min
-  MeklitBatchExportJob.set(wait: delay.minutes).perform_later(batch_id)
-end
-```
+- **Feature:** Finance Module — Instructor payroll view  
+- **Category:** API  
+- **Status:** `Missing`  
+- **Documentation reference:** `Architecture Context §3` — *"Instructor: Interacts with the system to log daily training attendance, trigger mock tests, and **view personal monthly payroll entries**."* `Architecture Requirements §4` — *"Instructors must have access to training logs, mock tests, and **their own payroll**."*  
+- **Source evidence:**  
+  - `backend/config/routes.rb` lines 8743–8784 — no `payroll_entries` resource is defined.  
+  - No `payroll_entries_controller.rb` exists under `app/controllers/api/v1/`.  
+  - `PayrollEntry` model (`app/models/payroll_entry.rb`) and `PayrollComputeJob` (`app/jobs/payroll_compute_job.rb`) exist, but there is no controller to surface the data to the frontend.  
+- **Priority:** **High** — instructors cannot access their salary information.  
+- **Effort:** Medium — create controller, Pundit policy, and route; the model and job already exist.
 
 ---
 
-### REL-2 · `ApplicationJob` retry/discard callbacks are commented out
-🟠 **High** · `backend/app/jobs/application_job.rb:4–7`
+#### GAP-13 · `GET /api/v1/financial_reports/export` (CSV) may be a partial stub
 
-```ruby
-class ApplicationJob < ActiveJob::Base
-  # retry_on ActiveRecord::Deadlocked
-  # discard_on ActiveJob::DeserializationError
-end
-```
-
-Without `discard_on ActiveJob::DeserializationError`, jobs whose records have been deleted will retry forever, clogging the queue.
-
-**Fix:**
-```ruby
-class ApplicationJob < ActiveJob::Base
-  retry_on  ActiveRecord::Deadlocked, wait: :polynomially_longer, attempts: 5
-  discard_on ActiveJob::DeserializationError do |job, error|
-    Rails.logger.error "[ApplicationJob] Discarding #{job.class} — record gone: #{error.message}"
-  end
-end
-```
+- **Feature:** Finance Module — CSV export  
+- **Category:** API  
+- **Status:** `Partially Implemented`  
+- **Documentation reference:** `FINANCE_MODULE_README.md` (referenced in the project) — *"Export to CSV — `GET /api/v1/financial_reports/export`"*  
+- **Source evidence:** `backend/config/routes.rb` line 8782 — `get :export` is defined. `Finance::FinancialReports` service has an `export_to_csv` method referenced in the README but not verified as fully implemented in the source (the `financial_reports.rb` service file visible in the codebase does not expose a confirmed working `export_to_csv` method). The `FinancialReportsController` does not contain a visible `export` action in the extracted sections.  
+- **Priority:** **Medium** — CSV export is a documented deliverable for finance admins.  
+- **Effort:** Low-Medium — confirm the service method exists and wire up the controller action with proper CSV headers.
 
 ---
 
-### REL-3 · `Date.parse(params[:date])` raises unhandled `ArgumentError`
-🟠 **High** · `backend/app/controllers/api/v1/attendance_logs_controller.rb:7`
-
-```ruby
-logs = logs.on_date(Date.parse(params[:date])) if params[:date].present?
-```
-
-Any malformed date string (e.g. `?date=not-a-date`) raises `ArgumentError: invalid date`, which Rails renders as a 500. `BaseController`'s `rescue_from` does not cover `ArgumentError`.
-
-**Fix:**
-```ruby
-if params[:date].present?
-  begin
-    logs = logs.on_date(Date.parse(params[:date]))
-  rescue ArgumentError
-    return render_error("Invalid date format. Expected YYYY-MM-DD.", status: :bad_request, code: "INVALID_DATE")
-  end
-end
-```
+### Domain: MASADEG / License Upgrade Module
 
 ---
 
-### REL-4 · No transaction wrapping exam result recording + penalty application
-🟡 **Medium** · `backend/app/controllers/api/v1/exam_bookings_controller.rb:28–40`
+#### GAP-14 · MASADEG module has no API — model exists but is entirely unexposed
 
-```ruby
-if @exam_booking.complete!(score, notes)
-  if @exam_booking.failed?
-    penalty_engine.apply_failure_penalty   # separate DB write, no transaction
-  end
-  send_exam_result_email
-  render json: @exam_booking
-end
-```
-
-If `complete!` succeeds but `apply_failure_penalty` fails (e.g., a validation error on the student record), the exam is marked complete but no penalty is recorded. The student can immediately re-book.
-
-**Fix:**
-```ruby
-ActiveRecord::Base.transaction do
-  @exam_booking.complete!(result_params[:score], result_params[:notes])
-  if @exam_booking.failed?
-    raise ActiveRecord::Rollback unless penalty_engine.apply_failure_penalty
-  end
-end
-```
+- **Feature:** MASADEG Module — license upgrade track for professional drivers  
+- **Category:** API  
+- **Status:** `Missing`  
+- **Documentation reference:** `Architecture Component Diagram §5` — *"Masadeq Module Component: Governs progression logic and verifies active license lifespans for driver upgrades."* `Database Design §11` — *"`license_upgrades` table: MASADEG upgrade requests... `prior_license_key`, `timir_compound_flag`."*  
+- **Source evidence:**  
+  - `backend/app/models/license_upgrade.rb` — fully implemented with `eligible_for_upgrade?`, `approve!`, `reject!` methods and a 3-year license age check.  
+  - `backend/db/migrate/20260625130400_create_license_upgrades.rb` — migration executed.  
+  - No file exists under `app/controllers/api/v1/` for license upgrades.  
+  - `backend/config/routes.rb` — no `license_upgrades` resource.  
+  - No `app/services/masadeq/` directory (unlike every other documented module which has a `services/` subdirectory).  
+- **Priority:** **Medium** — entire upgrade track is inaccessible from the UI or API.  
+- **Effort:** High — controller, routes, service objects, and Pundit policies all need creation.
 
 ---
 
-### REL-5 · No `JwtDenylist` cleanup scheduled — table grows unboundedly
-🟡 **Medium** · `backend/config/recurring.yml`
-
-`JwtDenylist` is designed for periodic cleanup (the model even has `cleanup_expired_tokens`), but it is not scheduled in `recurring.yml`. With a 1-hour JWT expiry, the table will accumulate millions of rows over time, slowing every authenticated request.
-
-**Fix** (add to `backend/config/recurring.yml`):
-```yaml
-production:
-  clear_solid_queue_finished_jobs:
-    command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
-    schedule: every hour at minute 12
-
-  cleanup_expired_jwt_tokens:          # ADD THIS
-    command: "JwtDenylist.cleanup_expired_tokens"
-    schedule: every hour at minute 30
-```
+### Domain: Renewal Requests Module
 
 ---
 
-## 5. Configuration & Environment Hardening
+#### GAP-15 · Renewal requests have no API or frontend — model and migration exist in isolation
 
-### CFG-1 · SSL not enforced in production
-🔴 **Critical** · `backend/config/environments/production.rb:14–16`
-
-```ruby
-# config.assume_ssl = true
-# config.force_ssl = true
-```
-
-Both SSL options are commented out. Running over plain HTTP in production exposes JWT tokens to interception.
-
-**Fix:** Uncomment both lines. If TLS is terminated at an upstream proxy (the case with Kamal's kamal-proxy):
-```ruby
-config.assume_ssl = true   # trust X-Forwarded-Proto: https from proxy
-config.force_ssl  = true   # redirect http:// to https:// at the app level
-```
+- **Feature:** Renewal Requests — external license renewal bypass flow  
+- **Category:** API  
+- **Status:** `Missing`  
+- **Documentation reference:** `Software Database Design §11` — *"`renewal_requests` table: Handles external driver renewals bypassing the learning management system."*  
+- **Source evidence:**  
+  - `backend/app/models/renewal_request.rb` — model implemented with `medical_data_updated` and `registered_kifle_ketema` fields.  
+  - `backend/db/migrate/20260625130600_create_renewal_requests.rb` — migration exists.  
+  - No `renewal_requests_controller.rb` in `app/controllers/api/v1/`.  
+  - `backend/config/routes.rb` — no `renewal_requests` resource.  
+- **Priority:** **Medium** — documented business process is entirely inaccessible.  
+- **Effort:** High — needs controller, routes, policies, and frontend page.
 
 ---
 
-### CFG-2 · `config.hosts` not set — Host header injection possible
-🟠 **High** · `backend/config/environments/production.rb:45–50`
-
-```ruby
-# config.hosts = [
-#   "example.com",
-#   /.*\.example\.com/
-# ]
-```
-
-Without this, an attacker can bypass DNS-rebinding protection and trigger 404s or extract information via a crafted `Host` header.
-
-**Fix:**
-```ruby
-config.hosts = [
-  ENV.fetch("APP_HOST"),            # e.g. "api.yourdomain.com"
-  /\A[\w\-]+\.yourdomain\.com\z/   # subdomains if needed
-]
-config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
-```
+### Domain: Frontend / UI
 
 ---
 
-### CFG-3 · Production SMTP is completely unconfigured — all emails fail silently
-🟠 **High** · `backend/config/environments/production.rb:34–41`
+#### GAP-16 · Student self-service portal does not exist
 
-```ruby
-# config.action_mailer.smtp_settings = {
-#   user_name: Rails.application.credentials.dig(:smtp, :user_name),
-#   ...
-# }
-```
-
-The SMTP block is entirely commented out. In production the mailer defaults to `:sendmail` delivery, which will either silently fail or deliver nothing in a containerised environment without a local MTA.
-
-**Fix:** Uncomment and configure, using an SMTP relay (SendGrid, Postmark, AWS SES, etc.):
-```ruby
-config.action_mailer.delivery_method = :smtp
-config.action_mailer.smtp_settings = {
-  user_name:            Rails.application.credentials.dig(:smtp, :user_name),
-  password:             Rails.application.credentials.dig(:smtp, :password),
-  address:              ENV.fetch("SMTP_ADDRESS", "smtp.sendgrid.net"),
-  port:                 587,
-  authentication:       :plain,
-  enable_starttls_auto: true
-}
-config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST") }
-```
+- **Feature:** Student role — read-only personal dashboard  
+- **Category:** UI  
+- **Status:** `Missing`  
+- **Documentation reference:** `Architecture Context §3` — *"Student: Interacts with the system in a read-only capacity to monitor personal training progress, exam results, and graduation status."* `Architecture Requirements §4` — *"Students must have read-only access to their own records."*  
+- **Source evidence:**  
+  - Frontend project tree (lines 322–444) shows route groups `(admin)`, `(clerk)`, `(dashboard)`, `(instructor)` — no `(student)` route group exists.  
+  - `backend/app/policies/lms_progress_policy.rb` lines 4219–4224 — `show?` returns `user.admin? || user.instructor? || user.clerk?`. Students are explicitly excluded.  
+  - No student-facing pages for training progress, exam results, or graduation status.  
+- **Priority:** **High** — students are a primary actor and have no interface.  
+- **Effort:** High — requires both frontend pages and Pundit policy updates to allow scoped student self-access.
 
 ---
 
-### CFG-4 · Devise `mailer_sender` is still the boilerplate placeholder
-🟠 **High** · `backend/config/initializers/devise.rb:26`
+#### GAP-17 · Instructor dashboard page is a non-functional placeholder
 
-```ruby
-config.mailer_sender = "please-change-me-at-config-initializers-devise@example.com"
-```
-
-Password reset emails will arrive from this address, destroying deliverability and trust.
-
-**Fix:**
-```ruby
-config.mailer_sender = ENV.fetch("MAILER_FROM", "noreply@drivingschool.et")
-```
-
----
-
-### CFG-5 · `ApplicationMailer` hardcodes `from@example.com` as the default sender
-🟠 **High** · `backend/app/mailers/application_mailer.rb:2`
-
-```ruby
-default from: "from@example.com"
-```
-
-`MeklitMailer` overrides this, but any future mailer that forgets the override will send from `from@example.com`.
-
-**Fix:**
-```ruby
-default from: ENV.fetch("MAILER_FROM", "noreply@drivingschool.et")
-```
+- **Feature:** Instructor role — functional dashboard (training logs, mock tests, payroll)  
+- **Category:** UI  
+- **Status:** `Partially Implemented` (routing + auth guard exist; content missing)  
+- **Documentation reference:** `Architecture Context §3` — *"Instructor: Interacts with the system to log daily training attendance, trigger mock tests, and view personal monthly payroll entries."*  
+- **Source evidence:** `Client/src/app/(instructor)/instructor/page.tsx` lines 17888–17900 —  
+  ```tsx
+  export default function InstructorPage() {
+    return (
+      <div className="space-y-6">
+        <h1>Instructor Overview</h1>
+        <p>Student progress tracking, attendance, and lesson management.</p>
+      </div>
+    );
+  }
+  ```
+  This is a static heading with descriptive text only. No attendance form, mock-test trigger, or payroll view.  
+- **Priority:** **High** — instructors cannot perform their primary workflow from the UI.  
+- **Effort:** High — functional components for attendance logging, mock test entry, and payroll display need to be built.
 
 ---
 
-### CFG-6 · `MeklitApiClient` falls back to the live ERTA production URL in all environments
-🟡 **Medium** · `backend/app/services/meklit/meklit_api_client.rb:6`
+#### GAP-18 · Clerk dashboard page is a non-functional placeholder
 
-```ruby
-BASE_URL = ENV["MEKLIT_API_BASE_URL"] || "https://api.meklit.gov.et"
-```
-
-In development and test, if `MEKLIT_API_BASE_URL` is not set, calls go to the real government API. This can pollute production data and consume API quota during development.
-
-**Fix:** Remove the fallback. Raise if the variable is missing in non-test environments:
-```ruby
-BASE_URL = ENV.fetch("MEKLIT_API_BASE_URL") do
-  raise "MEKLIT_API_BASE_URL must be set" unless Rails.env.test?
-  "http://localhost:9999"  # points nowhere in test
-end
-```
-
----
-
-### CFG-7 · `production.rb` uses local disk for Active Storage — data lost on every deploy
-🟡 **Medium** · `backend/config/environments/production.rb:12`
-
-```ruby
-config.active_storage.service = :local
-```
-
-Local disk storage in a Docker container is ephemeral. Every container restart, redeploy, or horizontal scale event will lose uploaded documents. This is especially critical given that student documents (grade certificates, medical records) must be retained for ERTA submissions.
-
-**Fix:** Configure an object storage backend in `config/storage.yml` and switch production to use it:
-```ruby
-config.active_storage.service = :amazon  # or :google, :azure
-```
+- **Feature:** Clerk role — functional dashboard (invoice management, exam booking)  
+- **Category:** UI  
+- **Status:** `Partially Implemented` (routing + auth guard exist; content missing)  
+- **Documentation reference:** `Architecture Context §3` — *"Clerk: Facilitates daily business operations by handling student registration, processing financial invoices, and orchestrating official exam bookings."*  
+- **Source evidence:** `Client/src/app/(clerk)/clerk/page.tsx` lines 17231–17244 —  
+  ```tsx
+  export default function ClerkPage() {
+    return (
+      <div className="space-y-6">
+        <h1>Clerk Overview</h1>
+        <p>Student registration, invoice management, and daily operations.</p>
+      </div>
+    );
+  }
+  ```
+  Static placeholder only. Invoice payment, exam scheduling, and batch export actions are absent.  
+- **Priority:** **High** — clerks cannot manage invoices or exam bookings from the UI.  
+- **Effort:** High.
 
 ---
 
-### CFG-8 · `package-lock=false` in `.npmrc` makes frontend builds non-deterministic
-🟡 **Medium** · `Driving-School-Management-System/.npmrc:1`
+#### GAP-19 · Admin dashboard page is a non-functional placeholder
 
-```
-package-lock=false
-```
-
-`npm ci` (used correctly in CI) requires `package-lock.json` and will fail if this option persists, or worse, will install subtly different dependency trees. Remove this line and commit `package-lock.json`.
-
----
-
-## 6. Performance Optimizations
-
-### PERF-1 · `Student.all` and `Batch.all` have no pagination — full table scans on every list request
-🟠 **High** · `backend/app/controllers/api/v1/students_controller.rb:15`, `backend/app/controllers/api/v1/batches_controller.rb:15`
-
-```ruby
-@students = Student.all   # returns every row
-@batches  = Batch.all     # returns every row
-```
-
-With hundreds or thousands of students this will cause slow responses, high memory usage, and large JSON payloads to the frontend.
-
-**Fix** (use Kaminari or built-in Rails pagination):
-```ruby
-# Gemfile
-gem "kaminari"
-
-# students_controller.rb
-def index
-  page     = params.fetch(:page, 1).to_i
-  per_page = params.fetch(:per_page, 50).to_i.clamp(1, 200)
-  @students = Student.order(:created_at).page(page).per(per_page)
-  render_success({ students: @students, meta: { page: page, total: Student.count } })
-end
-```
+- **Feature:** Admin role — system-wide management dashboard  
+- **Category:** UI  
+- **Status:** `Partially Implemented` (routing + auth guard exist; content missing)  
+- **Documentation reference:** `Architecture Context §3` — *"Admin: Possesses full system access to oversee all modules and data."*  
+- **Source evidence:** `Client/src/app/(admin)/admin/page.tsx` lines 17176–17188 —  
+  ```tsx
+  export default function AdminPage() {
+    return (
+      <div className="space-y-6">
+        <h1>Admin Overview</h1>
+        <p>System administration, user management, and financial oversight.</p>
+      </div>
+    );
+  }
+  ```
+  Static placeholder. No user management, batch controls, or system reports.  
+- **Priority:** **Medium** — the general dashboard page (`/`) provides some overview; admin-specific controls are missing.  
+- **Effort:** High.
 
 ---
 
-### PERF-2 · N+1 query in `Graduation::EligibilityValidator#validate_passed_practical_exam`
-🟡 **Medium** · `backend/app/services/graduation/eligibility_validator.rb:13–17`
+#### GAP-20 · Dashboard quick-action links for "Exam Bookings" and "Reports" are dead links
 
-```ruby
-passed = student.exam_bookings
-                .where(exam_type: "practical", status: "completed")
-                .any? { |b| b.passed? }   # loads all records into Ruby to check each one
-```
-
-`any?` with a block forces all matching records to be loaded into memory. For students with many attempts this is wasteful.
-
-**Fix:** Push the filter to the database. Since `passed?` checks `score >= 50`, this can be expressed as a SQL condition:
-
-```ruby
-passed = student.exam_bookings
-                .where(exam_type: "practical", status: "completed")
-                .where("score >= ?", ExamBooking::PASSING_SCORE)
-                .exists?
-```
+- **Feature:** General Dashboard — navigation to exam booking and financial reports pages  
+- **Category:** UI  
+- **Status:** `Missing`  
+- **Documentation reference:** `UI-UX Design Documentation §15` (implicitly — all role actions must be navigable).  
+- **Source evidence:** `Client/src/app/(dashboard)/page.tsx` lines 17378–17388 —  
+  ```tsx
+  { label: "Exam Bookings", href: "#", icon: CalendarCheck, … },
+  { label: "Reports",       href: "#", icon: FileText,      … }
+  ```
+  Both hrefs are `#`, meaning there are no destination pages implemented yet for exam booking management or the financial reports view.  
+- **Priority:** **High** — these are core navigation targets for both clerks and admins.  
+- **Effort:** High — exam booking and reports frontend pages need to be built.
 
 ---
 
-### PERF-3 · `exam_bookings` composite index missing for the graduation query
-🟡 **Medium** · `backend/db/schema.rb`
-
-The graduation and ERTA eligibility checks repeatedly query:
-```sql
-WHERE student_id = ? AND exam_type = 'practical' AND status = 'completed'
-```
-
-The schema only has single-column indexes on `student_id` and `status`. A composite index would serve this pattern much better.
-
-**Fix:**
-```ruby
-# New migration
-add_index :exam_bookings, [:student_id, :exam_type, :status],
-          name: "index_exam_bookings_on_student_exam_type_status"
-```
+### Domain: Security / Deployment
 
 ---
 
-### PERF-4 · `attendance_logs` index missing on `student_id + phase + attendance_date`
-🟡 **Medium** · `backend/db/schema.rb`
+#### GAP-21 · Production SSL is commented out
 
-`AttendanceLog` has a uniqueness constraint on `(student_id, phase, attendance_date)` but no corresponding index exists in the schema. This means every uniqueness validation triggers a full table scan.
-
-**Fix:**
-```ruby
-add_index :attendance_logs, [:student_id, :phase, :attendance_date],
-          unique: true,
-          name: "index_attendance_logs_on_student_phase_date"
-```
-
----
-
-## 7. Testing Gaps
-
-### TEST-1 · The backend's own CI workflow runs Minitest, not RSpec — the real test suite never runs there
-🔴 **Critical** · `backend/.github/workflows/ci.yml:56`
-
-```yaml
-run: bin/rails db:test:prepare test   # "test" invokes Rails minitest runner
-```
-
-The `backend/` subdirectory has its own CI workflow that runs `test` (Minitest) despite the project using RSpec exclusively. All the RSpec specs — models, services, request specs — are never executed by this workflow. The root-level `ci.yml` runs `bundle exec rspec` correctly, but developers relying on the per-backend workflow get a false green.
-
-**Fix** (`backend/.github/workflows/ci.yml`, the `test` job `Run tests` step):
-```yaml
-- name: Run tests
-  env:
-    RAILS_ENV: test
-    DATABASE_URL: postgres://postgres:postgres@localhost:5432
-    RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-  run: bundle exec rspec --format progress
-```
+- **Feature:** Security — encrypted transport  
+- **Category:** Deployment  
+- **Status:** `Missing` (configuration not applied)  
+- **Documentation reference:** `Architecture Security §8` — *"Database Security: Utilizes encrypted connections."* `Architecture Deployment §7` — the system is intended to run in production.  
+- **Source evidence:** `backend/config/environments/production.rb` lines 26746–26749 (improvement.md confirms this) —  
+  ```ruby
+  # config.assume_ssl = true
+  # config.force_ssl  = true
+  ```
+  Both SSL directives are commented out. The API will serve traffic over plain HTTP in production.  
+- **Priority:** **High** — JWT tokens and student PII transmitted without encryption.  
+- **Effort:** Trivial — uncomment both lines.
 
 ---
 
-### TEST-2 · No request specs for four controllers
-🟠 **High** · `backend/spec/requests/api/v1/`
+#### GAP-22 · Production SMTP is completely unconfigured — all email delivery will fail silently
 
-The following controllers have **zero** request/integration test coverage:
-- `AttendanceLogsController` — the LMS core loop
-- `MockTestsController`
-- `BatchesController`
-- `LmsProgressController`
-
-These are critical paths for student progression. The existing 4 request spec files cover only auth, students, exam_bookings, and users.
-
-**Fix:** Create at minimum happy-path + auth-guard specs for each:
-```
-spec/requests/api/v1/attendance_logs_spec.rb
-spec/requests/api/v1/mock_tests_spec.rb
-spec/requests/api/v1/batches_spec.rb
-spec/requests/api/v1/lms_progress_spec.rb
-```
+- **Feature:** Mailers — batch submission, approval, rejection, exam booking, and result notifications  
+- **Category:** Deployment  
+- **Status:** `Missing`  
+- **Documentation reference:** `Architecture Component Diagram §5` — *"Mailers for notifications."* Six mail templates exist (`batch_submission.html.erb`, `exam_booking.html.erb`, etc.).  
+- **Source evidence:** `backend/config/environments/production.rb` — SMTP settings block is commented out. `backend/app/mailers/application_mailer.rb` line 2 — `default from: "from@example.com"` (placeholder). `backend/config/initializers/devise.rb` — `config.mailer_sender = "please-change-me-at-config-initializers-devise@example.com"`.  
+- **Priority:** **High** — all email-dependent workflows (ERTA notifications, exam results, Meklit approvals) silently fail in production.  
+- **Effort:** Low — configure SMTP relay (SendGrid, Postmark) and update placeholder addresses.
 
 ---
 
-### TEST-3 · Frontend has zero test infrastructure
-🟠 **High** · `Client/`
+#### GAP-23 · Active Storage document attachments are referenced by validators but not declared on the Student model
 
-There are no test files, no test configuration, and no test runner installed in the frontend. The CI only runs `lint` and `build`, which won't catch runtime regressions.
-
-**Fix:**
-```bash
-cd Client
-npm install -D vitest @testing-library/react @testing-library/jest-dom @vitejs/plugin-react jsdom
-```
-
-Add a `vitest.config.ts`, at minimum smoke-test the enrollment wizard:
-```typescript
-// src/components/enrollment/__tests__/enrollment-wizard.test.tsx
-```
-
----
-
-### TEST-4 · `actions/checkout@v6` does not exist — backend CI uses an invalid action version
-🟠 **High** · `backend/.github/workflows/ci.yml:14, 33, 60`
-
-```yaml
-uses: actions/checkout@v6   # v6 does not exist; v4 is the latest stable
-```
-
-GitHub Actions will resolve this to the latest available tag with a `v6` major. Currently this resolves to nothing and the workflow should be failing. The root workflow correctly uses `@v4`.
-
-**Fix:** Replace all three occurrences in `backend/.github/workflows/ci.yml`:
-```yaml
-uses: actions/checkout@v4
-```
+- **Feature:** Document Management — profile photo, yellow card, grade certificates  
+- **Category:** Database / API  
+- **Status:** `Partially Implemented`  
+- **Documentation reference:** `Architecture Data Model §12` — *"Compiled digital dossier archives"* for graduation. `Architecture Requirements §4` — required documents for ERTA submission.  
+- **Source evidence:**  
+  - `backend/app/services/erta/eligibility_validator.rb` lines 4395–4400 checks `student.respond_to?(doc_type) && student.send(doc_type).attached?` for `profile_photo`, `yellow_card`, `grade_8`, `grade_10`, `grade_12`.  
+  - `backend/app/services/meklit/qualification_validator.rb` lines 6050–6056 performs the same checks.  
+  - `backend/app/services/meklit/payload_generator.rb` lines 5967–5991 calls `student.send(doc_type).attached?`.  
+  - No `has_one_attached :profile_photo`, `has_one_attached :yellow_card`, etc. is visible in `backend/app/models/student.rb` or any migration (Active Storage declarations do not require a migration but do require model declarations).  
+  - `backend/config/environments/production.rb` line 26857 — `config.active_storage.service = :local` (uses ephemeral container disk in Docker; files lost on restart).  
+- **Priority:** **High** — the ERTA eligibility check will always fail document validation if `has_one_attached` is not declared, making it impossible for any student to become exam-eligible through the API.  
+- **Effort:** Medium — add Active Storage declarations to the Student model and configure a persistent object storage backend (S3, GCS) for production.
 
 ---
 
-## 8. CI/CD & Operational Readiness
-
-### OPS-1 · Kamal `deploy.yml` has hardcoded placeholder server IP
-🟠 **High** · `backend/config/deploy.yml`
-
-```yaml
-servers:
-  web:
-    - 192.168.0.1    # placeholder — private subnet IP, not a real production server
-```
-
-The IP `192.168.0.1` is a private network default gateway. Deploying with this will fail silently or connect to the wrong host.
-
-**Fix:** Replace with the actual server IP or parameterize via environment variable:
-```yaml
-servers:
-  web:
-    - <%= ENV.fetch("DEPLOY_SERVER_IP") %>
-```
+### Domain: Testing & CI
 
 ---
 
-### OPS-2 · SSL/TLS proxy is commented out in Kamal deploy config
-🟠 **High** · `backend/config/deploy.yml`
+#### GAP-24 · Backend CI workflow runs Minitest instead of RSpec — real test suite never executes in per-backend CI
 
-The proxy section for TLS is commented out. Without it, kamal-proxy will serve traffic on plain HTTP.
-
-**Fix:** Uncomment and configure in `deploy.yml`:
-```yaml
-proxy:
-  ssl: true
-  host: yourdomain.com
-```
+- **Feature:** Testing — CI pipeline correctness  
+- **Category:** Testing  
+- **Status:** `Partially Implemented`  
+- **Documentation reference:** `Software Testing Strategy Documentation §16` (general testing requirement).  
+- **Source evidence:** `backend/.github/workflows/ci.yml` line 26971 — `run: bin/rails db:test:prepare test`. The `test` command invokes Rails' built-in Minitest runner. The project uses RSpec exclusively (all specs are in `spec/`, no Minitest files exist). This workflow always reports green because there are no Minitest tests to fail, while the actual RSpec suite never runs in this CI path.  
+- **Priority:** **High** — the per-backend CI is a false safety net.  
+- **Effort:** Trivial — replace `bin/rails db:test:prepare test` with `bundle exec rspec --format progress`.
 
 ---
 
-### OPS-3 · No centralised error tracking (Sentry, Bugsnag, etc.)
-🟡 **Medium** · Entire project
+#### GAP-25 · No request specs for four critical controllers
 
-There is no error-tracking integration. Unhandled exceptions in production will be invisible unless someone manually scans logs.
-
-**Fix:**
-```ruby
-# Gemfile
-gem "sentry-ruby"
-gem "sentry-rails"
-
-# config/initializers/sentry.rb
-Sentry.init do |config|
-  config.dsn = ENV["SENTRY_DSN"]
-  config.breadcrumbs_logger = [:active_support_logger, :http_logger]
-  config.traces_sample_rate = 0.1
-end
-```
+- **Feature:** Testing coverage for `AttendanceLogs`, `MockTests`, `Batches`, `LmsProgress`  
+- **Category:** Testing  
+- **Status:** `Missing`  
+- **Documentation reference:** `Software Testing Strategy Documentation §16`.  
+- **Source evidence:** `backend/spec/requests/api/v1/` contains: `attendance_logs_spec.rb` (exists but minimal — only 2 test cases at line 12906), `mock_tests_spec.rb` (listed in file tree but content not confirmed substantial), `batches_spec.rb`, `lms_progress_spec.rb`. The improvement.md document at line 26988 explicitly confirms: *"AttendanceLogsController, MockTestsController, BatchesController, LmsProgressController have zero request/integration test coverage."*  
+- **Priority:** **High** — these controllers drive the core student progression loop.  
+- **Effort:** Medium — ~50–100 lines of RSpec per controller.
 
 ---
 
-### OPS-4 · No database backup strategy documented or automated
-🟡 **Medium** · Entire project
+## Phase 3.3 – Additional Observations
 
-There is no backup strategy, cron job, or documentation for PostgreSQL backups. For a system that manages government-facing student records, data loss risk is significant.
+### Code with No Documentation Counterpart
 
-**Fix:** At minimum, add a daily `pg_dump` Kamal accessory or hook in `post-deploy.sample`, and document it in the README.
+The following are implemented but not mentioned in the provided architecture documentation:
 
----
-
-### OPS-5 · No rate limiting on any endpoint
-🟡 **Medium** · Entire project
-
-The login endpoint (`POST /api/v1/auth/login`) and the registration endpoint have no rate limiting. An attacker can brute-force credentials or flood the API.
-
-**Fix:**
-```ruby
-# Gemfile
-gem "rack-attack"
-
-# config/initializers/rack_attack.rb
-Rack::Attack.throttle("login/ip", limit: 10, period: 60) do |req|
-  req.ip if req.path == "/api/v1/auth/login" && req.post?
-end
-Rack::Attack.throttle("register/ip", limit: 5, period: 60) do |req|
-  req.ip if req.path == "/api/v1/auth/register" && req.post?
-end
-```
+| Item | File | Note |
+|---|---|---|
+| **Kamal deployment** | `backend/config/deploy.yml`, `backend/.kamal/` | Docs mention only Docker Compose. Kamal is the actual deployment tool. |
+| **Swagger/OpenAPI (rswag)** | `backend/config/initializers/rswag_api.rb`, `rswag_ui.rb` | Docs say no OpenAPI spec. The gem is configured and accessible at `/api-docs`. |
+| **Rack::Attack rate limiting** | `backend/config/initializers/rack_attack.rb` | Docs do not mention rate limiting; the initializer file exists (contents not confirmed). |
+| **Sentry error tracking** | `backend/config/initializers/sentry.rb` | Not mentioned in docs; file exists (likely placeholder DSN). |
+| **Token refresh endpoint** | `POST /api/v1/auth/refresh` | Auth controller at line 1871; not described in API design docs. |
+| **`GET /api/v1/auth/me`** | Auth controller at line 1884 | Not in the documented API surface. |
+| **Kaminari pagination** | `batches_controller.rb` uses `.page()/.per()` | Only batches are paginated; student list is not paginated (`Student.all`). |
+| **Sprint documentation files** | `SPRINT_2_*`, `SPRINT_4_*`, `SPRINT_5_6_*` | In-progress sprint artifacts not referenced by the architecture docs. |
+| **Two separate `PenaltyEngine` classes** | `services/penalty/penalty_engine.rb` AND `services/finance/penalty_engine.rb` | Two different penalty implementations exist simultaneously with conflicting business rules. Architecture defines only one Penalty Engine. |
 
 ---
 
-## 9. Documentation Deficiencies
+### Documentation vs Implementation Inconsistencies
 
-### DOC-1 · No OpenAPI / Swagger specification
-🟡 **Medium** · Entire project
-
-The README contains inline curl examples but no machine-readable OpenAPI spec. This makes frontend integration error-prone and blocks auto-generated client SDK creation.
-
-**Fix:**
-```ruby
-# Gemfile, development group
-gem "rswag-api"
-gem "rswag-ui"
-gem "rswag-specs"
-```
-
-Run `rails rswag:specs:swaggerize` after annotating existing request specs with Rswag DSL.
+| Inconsistency | Doc Says | Code Says |
+|---|---|---|
+| Penalty remedial period | 5 days | `Penalty::PenaltyEngine::PENALTY_DAYS = 7` |
+| Mock test pass threshold | Score `> 37` (minimum 38%) | `MockTest::PASS_THRESHOLD = 37` + `score > PASS_THRESHOLD` (> 37, i.e. minimum 38) — ✅ consistent in model but `PASS_THRESHOLD` name implies threshold, not above-threshold |
+| Mock test max score | "Maximum 50 points" (Database Design §11) | `MockTest` validates `less_than_or_equal_to: 100` — allows scores up to 100 |
+| Graduation eligibility | "status must be graduated to trigger dossier" | `Graduation::EligibilityValidator#validate_status` checks `exam_eligible?`, not `graduated` — student transitions to graduated *during* graduation, not before |
+| Docker Compose port for rails-api | "Port 8080 mapped to 8080 or 3000" (ambiguous) | `deploy.yml` (Kamal) is the actual config; `docker-compose.yml` content not fully visible |
+| Production container orchestration | "Docker Compose" | Kamal is configured and used |
+| Response format | All controllers use `{ success:, data:, error: }` envelope | `StudentsController` and some others inherit from `BaseController` (now corrected per code comments), but inconsistencies remain per `improvement.md §CODE-2` |
 
 ---
 
-### DOC-2 · No `.env.example` file for the frontend (`Client/`)
-🟡 **Medium** · `Client/`
+### Known Self-Identified Issues (from `improvement.md` in the repo)
 
-`api.ts` reads `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_DEFAULT_BATCH_ID` but no `.env.example` exists for the `Client/` directory. New developers will not know which variables to set.
+The project already contains an internal `improvement.md` that identifies several of the issues listed above plus additional code-quality gaps. Items tracked there that are **also documentation gaps** include:
 
-**Fix:** Create `Client/.env.example`:
-```
-NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_DEFAULT_BATCH_ID=1
-```
-
----
-
-### DOC-3 · Missing architecture diagram
-🟢 **Low** · README
-
-The README describes components in text but lacks any visual overview of how frontend, backend, Solid Queue, PostgreSQL, and the ERTA API interact.
+- `CFG-2`: Host header injection (`config.hosts` commented out) — **security gap**
+- `CFG-3`: Production SMTP unconfigured — captured as **GAP-22**
+- `CFG-7`: Active Storage using local disk in production — captured as **GAP-23**
+- `PERF-1`: `Student.all` returns full table without pagination — **performance risk** not addressed in architecture docs
+- `SEC-1`: Student, Batch, ExamBooking controllers previously allowed unauthenticated access — partially resolved per `base_controller.rb` comment
+- `CODE-1`: `LicenseUpgrade#reject!` silently ignores the `reason:` parameter despite the migration `20260627094958_add_rejection_reason_to_license_upgrades.rb` adding the column
 
 ---
 
-## 10. Code Quality & Maintainability
+## Priority Summary Table
 
-### CODE-1 · `LicenseUpgrade#reject!` silently ignores its `reason:` parameter
-🟠 **High** · `backend/app/models/license_upgrade.rb:42`
-
-```ruby
-def reject!(reason: nil)
-  update!(status: "rejected")   # reason is accepted but never saved
-end
-```
-
-The `rejection_reason` column is not shown in the schema for `license_upgrades`, but the method signature promises to record a reason. The parameter is silently ignored.
-
-**Fix:** Either add the column and save it, or remove the parameter:
-```ruby
-# Option A — save it (requires migration)
-def reject!(reason: nil)
-  update!(status: "rejected", rejection_reason: reason)
-end
-
-# Option B — remove the misleading parameter
-def reject!
-  update!(status: "rejected")
-end
-```
-
----
-
-### CODE-2 · Inconsistent response format across controllers
-🟡 **Medium** · Multiple files
-
-`BaseController` subclasses (`UsersController`, `AuthController`, `AttendanceLogsController`, etc.) return a `{ success:, data:, message: }` envelope. But `ApplicationController` subclasses (`StudentsController`, `BatchesController`, `ExamBookingsController`) return bare ActiveRecord JSON with `{ errors: }` for failures. This forces the frontend to handle two different response shapes.
-
-**Fix:** After fixing SEC-2 (inheriting from BaseController), standardise all responses. Consult `render_success` / `render_error` in `BaseController` and remove bare `render json: @batch` calls.
-
----
-
-### CODE-3 · `Graduation::Processor` hard-codes a location-specific string
-🟢 **Low** · `backend/app/services/graduation/processor.rb:22`
-
-```ruby
-GraduationRecord.create!(
-  transfer_destination: "Kifle Ketema Sub-City"   # hardcoded
-)
-```
-
-This should be driven from the student's registered sub-city or a configuration constant, not a literal string.
-
----
-
-### CODE-4 · License categories and prices are hardcoded in the controller
-🟢 **Low** · `backend/app/controllers/api/v1/license_categories_controller.rb`
-
-All four license categories with their prices, age requirements, and training hours are in-code constants. Changing a price requires a code deployment.
-
-**Fix:** Extract to a database table or a YAML configuration file.
-
----
-
-### CODE-5 · `MeklitApiClient` constants evaluated at class-load time
-🟢 **Low** · `backend/app/services/meklit/meklit_api_client.rb:6–8`
-
-```ruby
-BASE_URL    = ENV["MEKLIT_API_BASE_URL"] || "https://api.meklit.gov.et"
-API_VERSION = "v1"
-```
-
-Ruby constants defined at class load time are frozen; changing the env variable after the process starts has no effect. This also complicates test stubbing. Prefer method-level lookups:
-
-```ruby
-def base_url    = ENV.fetch("MEKLIT_API_BASE_URL")
-def api_version = "v1"
-```
-
----
-
-## 11. What Passes
-
-The following areas are well-implemented and require no changes:
-
-| Area | Notes |
-|---|---|
-| **Password hashing** | Devise with bcrypt, 12 stretches in production, 1 in test |
-| **JWT auth & revocation** | Denylist strategy correctly implemented; 1-hour expiry |
-| **Pundit authorization** | `UserPolicy` correctly gates admin-only operations; `ApplicationPolicy` denies by default |
-| **Input validation** | Strong parameters on all controllers; thorough model validations with inclusion, numericality, presence checks |
-| **Database indexes on hot paths** | `students.student_id`, `students.document_id`, `exam_bookings.student_id`, `jwt_denylist.jti`, `users.email` all indexed |
-| **AASM state machine** | Student lifecycle transitions with guards are clean and well-tested |
-| **Service object pattern** | Business logic cleanly extracted into `app/services/` |
-| **Structured logging in production** | `config.log_tags = [:request_id]` and `TaggedLogging.logger(STDOUT)` |
-| **Multi-stage Docker image** | Non-root user, jemalloc, `--no-install-recommends`, minimal final image |
-| **Dependabot** | Weekly updates for both Bundler and GitHub Actions |
-| **Bundler-audit + Brakeman in CI** | Security scanning on every push to main (backend subdirectory workflow) |
-| **RuboCop** | Omakase styleguide enforced in CI |
-| **Health check** | `GET /up` returns 200 by default |
-| **Parameter filtering** | `passw`, `email`, `token`, etc. filtered from logs |
-| **Solid Queue + Solid Cache** | Database-backed; no Redis dependency in production (other than the broken retry counter) |
-| **Factory Bot + Faker + Shoulda Matchers** | Rich test factory setup for all 11 models |
-| **Model specs** | All key business rules for Student, ExamBooking, MockTest, AttendanceLog, Invoice, etc. covered |
-| **Service specs** | All 10 service objects have dedicated spec files |
-| **README** | Comprehensive setup, usage examples, env variable table, deployment instructions |
-| **Git ignore / gitattributes** | Credentials, env files, master.key all excluded; LF line endings enforced |
+| Gap ID | Feature | Category | Status | Priority |
+|---|---|---|---|---|
+| GAP-01 | Student update endpoint | API | Missing | **High** |
+| GAP-02 | `identification_document` type field | Database | Missing | **High** |
+| GAP-03 | `eye_acuity_test` field | Database | Missing | **Medium** |
+| GAP-04 | `meklit_approval_date` field | Database | Missing | **Medium** |
+| GAP-05 | Student `education_level` field | Database | Missing | **Medium** |
+| GAP-06 | Student `n_number` field | Database | Missing | **High** |
+| GAP-07 | Batch `export_payload` JSONB column | Database | Missing | **Medium** |
+| GAP-08 | Penalty period 7 days vs 5 days | Business Logic | Partial | **High** |
+| GAP-09 | Payment fence for exam re-booking | API / Business Logic | Missing | **High** |
+| GAP-10 | `fetch_last_attendance_date` TODO stub | Business Logic | Partial | **High** |
+| GAP-11 | `DossierTransferJob` is a stub | Business Logic / Job | Partial | **High** |
+| GAP-12 | Payroll entries API for instructors | API | Missing | **High** |
+| GAP-13 | CSV financial export endpoint | API | Partial | **Medium** |
+| GAP-14 | MASADEG module entirely unexposed | API | Missing | **Medium** |
+| GAP-15 | Renewal requests module unexposed | API | Missing | **Medium** |
+| GAP-16 | Student self-service portal | UI | Missing | **High** |
+| GAP-17 | Instructor dashboard placeholder | UI | Partial | **High** |
+| GAP-18 | Clerk dashboard placeholder | UI | Partial | **High** |
+| GAP-19 | Admin dashboard placeholder | UI | Partial | **Medium** |
+| GAP-20 | Dead links in dashboard quick actions | UI | Missing | **High** |
+| GAP-21 | Production SSL commented out | Deployment | Missing | **High** |
+| GAP-22 | Production SMTP unconfigured | Deployment | Missing | **High** |
+| GAP-23 | Active Storage not declared on Student | Database / API | Partial | **High** |
+| GAP-24 | Backend CI runs Minitest not RSpec | Testing | Partial | **High** |
+| GAP-25 | Missing request specs for 4 controllers | Testing | Missing | **High** |
 
 ---
 

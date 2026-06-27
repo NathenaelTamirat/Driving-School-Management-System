@@ -110,6 +110,10 @@ module Api
         end
       end
 
+      def exam_booking_params
+        params.require(:exam_booking).permit(:exam_type, :scheduled_date, :venue, :notes)
+      end
+
       def send_exam_booking_email
         student_email = @student.email.presence or raise "Student #{@student.student_id} has no email"
         MeklitMailer.exam_booking(@exam_booking, student_email).deliver_later

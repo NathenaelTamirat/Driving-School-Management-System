@@ -18,6 +18,7 @@ module ERTA
       validate_practical_completion
       validate_mock_test_score
       validate_documents
+      validate_no_outstanding_penalty
 
       errors.empty?
     end
@@ -58,6 +59,18 @@ module ERTA
         unless student.respond_to?(doc_type) && student.send(doc_type).attached?
           errors << "Missing required document: #{doc_type.humanize}"
         end
+      end
+    end
+
+    # Validate that the student has no outstanding penalty invoices.
+    # Prevents re-booking until penalty is paid (payment fence).
+    def validate_no_outstanding_penalty
+      outstanding = student.invoices.where(
+        milestone_type: Invoice::MILESTONE_TYPES[:government_penalty],
+        status: %w[pending overdue]
+      )
+      if outstanding.exists?
+        errors << "Outstanding penalty invoice must be paid before booking a new exam"
       end
     end
   end

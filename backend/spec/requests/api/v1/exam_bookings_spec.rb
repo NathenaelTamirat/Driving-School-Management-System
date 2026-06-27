@@ -13,6 +13,17 @@ RSpec.describe 'Api::V1::ExamBookings', type: :request do
   let(:student) { create(:student, batch: batch, status: 'exam_eligible', theory_days_completed: 35, practical_days_completed: 52, mock_test_score: 80) }
   let(:exam_booking) { create(:exam_booking, student: student) }
 
+  # Attach required documents so the eligibility check passes for the student
+  before do
+    %w[profile_photo yellow_card grade_8 grade_10 grade_12].each do |doc|
+      student.send(doc).attach(
+        io: StringIO.new("dummy #{doc}"),
+        filename: "#{doc}.jpg",
+        content_type: 'image/jpeg'
+      )
+    end
+  end
+
   describe 'GET /api/v1/students/:student_id/exam_bookings' do
     it 'requires authentication' do
       get "/api/v1/students/#{student.id}/exam_bookings"
