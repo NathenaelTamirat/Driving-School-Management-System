@@ -11,7 +11,6 @@ class CreateMockTests < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :mock_tests, :student_id
     add_index :mock_tests, :test_date
   end
 end
