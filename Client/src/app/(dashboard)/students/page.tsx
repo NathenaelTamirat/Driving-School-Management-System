@@ -13,7 +13,7 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, startTransition } from "react";
 import Link from "next/link";
 import { Plus, Search, Users, Layers, BookOpen, GraduationCap, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -83,7 +83,7 @@ export default function StudentsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { startTransition(() => { fetchData(); }); }, []);
 
   const stats = useMemo(() => ({
     total: students.length,

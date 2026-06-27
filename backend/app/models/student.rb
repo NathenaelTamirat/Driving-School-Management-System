@@ -19,6 +19,8 @@ class Student < ApplicationRecord
   validates :status, presence: true
   validates :student_id, presence: true, uniqueness: true
   validates :document_id, presence: true, uniqueness: true
+  validates :identification_document, inclusion: { in: %w[National_ID Kebele_ID Passport Birth_Certificate] }, allow_blank: true
+  validates :education_level, inclusion: { in: %w[Grade_4_Certificate Grade_10_Certificate] }, allow_blank: true
   validates :first_name, presence: true, length: { maximum: 50 }
   validates :middle_name, presence: true, length: { maximum: 50 }
   validates :last_name, presence: true, length: { maximum: 50 }

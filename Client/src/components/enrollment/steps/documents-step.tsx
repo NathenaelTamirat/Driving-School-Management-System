@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { useEnrollment } from "@/components/enrollment/enrollment-provider";
 import {
   ENROLLMENT_DOCUMENT_ROWS,
-  type EnrollmentDocumentKey,
 } from "@/lib/enrollment-types";
 import { FileUpload, type UploadedFile } from "@/components/file-upload";
 import { UPLOAD_SLOTS } from "@/lib/validations";
@@ -18,7 +17,7 @@ type DocumentsStepProps = {
 };
 
 export function DocumentsStep({ onBack, onContinue }: DocumentsStepProps) {
-  const { formData, updateFormData } = useEnrollment();
+  const { updateFormData } = useEnrollment();
   const [uploadedFiles, setUploadedFiles] = useState<
     Record<string, UploadedFile | null>
   >({});

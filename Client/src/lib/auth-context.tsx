@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  startTransition,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -60,22 +61,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const storedToken = getToken();
     if (!storedToken) {
-      setIsLoading(false);
+      startTransition(() => setIsLoading(false));
       return;
     }
 
-    setTokenState(storedToken);
+    startTransition(() => setTokenState(storedToken));
 
     getMe().then((result) => {
-      if (result.success && result.data) {
-        setUser(result.data.user);
-      } else {
-        clearToken();
-        setTokenState(null);
+      startTransition(() => {
+        if (result.success && result.data) {
+          setUser(result.data.user);
+        } else {
+          clearToken();
+          setTokenState(null);
+          setIsLoading(false);
+          return;
+        }
         setIsLoading(false);
-        return;
-      }
-      setIsLoading(false);
+      });
     });
   }, []);
 

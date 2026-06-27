@@ -3,7 +3,7 @@
 module Api
   module V1
     class StudentsController < BaseController
-      before_action :set_student, only: [ :show ]
+      before_action :set_student, only: [ :show, :update ]
 
       # GET /api/v1/students
       def index
@@ -40,6 +40,18 @@ module Api
         end
       end
 
+      # PATCH/PUT /api/v1/students/:id
+      def update
+        authorize @student
+
+        if @student.update(student_params)
+          handle_file_uploads if params[:student]
+          render_success(@student)
+        else
+          render_error("Failed to update student", errors: @student.errors.full_messages)
+        end
+      end
+
       private
 
       def set_student
@@ -53,6 +65,10 @@ module Api
           :batch_id,
           :student_id,
           :document_id,
+          :identification_document,
+          :eye_acuity_test,
+          :meklit_approval_date,
+          :education_level,
           :first_name,
           :middle_name,
           :last_name,

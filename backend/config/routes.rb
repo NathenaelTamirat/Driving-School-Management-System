@@ -26,7 +26,7 @@ Rails.application.routes.draw do
       resources :batches, only: [ :index, :show, :create ]
       resources :license_categories, only: [ :index ]
       resources :course_categories, only: [ :index ]
-      resources :students, only: [ :index, :show, :create ] do
+      resources :students, only: [ :index, :show, :create, :update ] do
         # Student-specific invoices (Finance Module)
         get 'invoices', to: 'invoices#student_invoices'
         

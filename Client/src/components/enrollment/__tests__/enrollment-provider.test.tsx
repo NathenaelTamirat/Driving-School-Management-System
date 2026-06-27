@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, renderHook, act } from "@testing-library/react";
+import { describe, it, expect, beforeEach } from "vitest";
+import { render, screen, act } from "@testing-library/react";
 import { EnrollmentProvider, useEnrollment } from "@/components/enrollment/enrollment-provider";
 import {
   INITIAL_ENROLLMENT_STATE,

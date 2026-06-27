@@ -148,7 +148,6 @@ describe("AuthProvider", () => {
       }),
     }));
 
-    const pushMock = vi.fn();
     vi.stubGlobal("window", { ...window, location: { ...window.location, href: "" } });
 
     renderWithProvider();
