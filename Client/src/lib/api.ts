@@ -211,6 +211,67 @@ export async function updateStudent(
   }
 }
 
+// POST /api/v1/auth/login
+export async function login(email: string, password: string): Promise<ApiResponse<{ user: User; token: string }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auth: { email, password } }),
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      return { success: false, error: json.error?.message || json.error || "Invalid email or password" };
+    }
+    const token = json.data?.token;
+    if (token) setToken(token);
+    return { success: true, data: json.data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// DELETE /api/v1/auth/logout
+export async function logout(): Promise<ApiResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    clearToken();
+    const json = await response.json();
+    return { success: true, data: json };
+  } catch {
+    clearToken();
+    return { success: true };
+  }
+}
+
+// GET /api/v1/auth/me
+export async function getMe(): Promise<ApiResponse<{ user: User }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/me`, { headers: authHeaders() });
+    const json = await response.json();
+    if (!response.ok) {
+      clearToken();
+      return { success: false, error: json.error || "Session expired" };
+    }
+    return { success: true, data: json.data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+export type User = {
+  id: number;
+  email: string;
+  full_name: string;
+  role: "admin" | "instructor" | "clerk" | "student";
+  phone_number: string | null;
+  is_qualified_instructor: boolean;
+  created_at: string;
+};
+
 // Type shape returned by the backend Student index/show endpoints.
 // Mirrors the Rails model attributes from backend/app/models/student.rb.
 export type Student = {
