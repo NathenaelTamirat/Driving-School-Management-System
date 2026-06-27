@@ -1,17 +1,6 @@
-// Type definitions and constants for the multi-step student enrollment wizard.
-//
-// This module is the single source of truth for:
-// 1. License categories offered by the school (LICENSE_CATEGORIES)
-// 2. The shape of wizard state (EnrollmentState)
-// 3. Document upload slots and their metadata (ENROLLMENT_DOCUMENT_ROWS)
-// 4. Pricing constants (REGISTRATION_FEE, per-category prices)
-// 5. Local-storage draft persistence key (ENROLLMENT_DRAFT_KEY)
-//
-// The enrollment pipeline is decoupled from the API layer: this module only
-// defines *what* the wizard collects; src/lib/api.ts handles *how* it's sent.
-
 import type { UploadSlot } from "@/lib/validations";
 import { UPLOAD_SLOTS } from "@/lib/validations";
+import { getCourseCategories, type CourseCategory } from "@/lib/api";
 
 // Simplified form data shape for the multi-step enrollment wizard.
 // Uses generic field names (firstName, lastName, email, etc.) that map
@@ -30,11 +19,6 @@ export type EnrollmentFormData = {
   paymentNotes?: string;
 };
 
-// Four license categories match the Ethiopian driving licence tiers offered
-// by the school: private auto (B), motorcycle (A), public-transport minibus
-// (C1), and dry-cargo truck (C). Each entry drives the pricing card UI on
-// the category-selection step as well as the fee calculation in
-// calculateEnrollmentTotal().
 export type LicenseCategoryId = "auto" | "motor" | "public1" | "drycargo1";
 
 export type LicenseCategory = {
@@ -50,52 +34,11 @@ export type LicenseCategory = {
   }[];
 };
 
-// Personal information collected on the first step of the wizard.
-// All fields map 1:1 to columns on the backend Student model except
-// emergency contact fields (stored separately or logged for reference).
-export type EnrollmentProfile = {
-  firstNameEn: string;
-  fatherNameEn: string;
-  lastNameEn: string;
-  phone: string;
-  dateOfBirthEc: string;
-  bloodType: string;
-  address: string;
-  houseNumber: string;
-  kebele: string;
-  woreda: string;
-  subcity: string;
-  city: string;
-  emergencyContactName: string;
-  emergencyContactPhone: string;
-};
-
-export type EnrollmentDocumentKey = UploadSlot["key"];
-
-export type UploadedDocument = {
-  file: File;
-  preview: string | null;
-  name: string;
-  size: number;
-};
-
-// Complete snapshot of the wizard at any point in time.
-// Persisted to localStorage under ENROLLMENT_DRAFT_KEY so users can
-// resume a partially-filled enrolment without data loss.
-export type EnrollmentState = {
-  profile: EnrollmentProfile;
-  categoryId: LicenseCategoryId | null;
-  documents: Partial<Record<EnrollmentDocumentKey, UploadedDocument>>;
-  paymentPhone: string;
-  paymentRequestSent: boolean;
-  currentStep: number;
-};
-
-export const ENROLLMENT_DRAFT_KEY = "dsas-enrollment-draft";
-
-export const REGISTRATION_FEE = 1500;
-
-export const LICENSE_CATEGORIES: LicenseCategory[] = [
+// Hardcoded defaults: used as fallback when the backend API is unreachable.
+// The single source of truth is backend/config/course_categories.yml served
+// via GET /api/v1/course_categories. Call loadLicenseCategories() at app
+// startup to override these with live data.
+const HARDCODED_CATEGORIES: LicenseCategory[] = [
   {
     id: "auto",
     title: "Auto (Automobile)",
@@ -150,6 +93,125 @@ export const LICENSE_CATEGORIES: LicenseCategory[] = [
   },
 ];
 
+// Runtime categories — initialized from HARDCODED_CATEGORIES but can be
+// overridden via loadLicenseCategories(). All consumers reference this
+// variable so pricing stays in sync after the API fetch completes.
+let LICENSE_CATEGORIES: LicenseCategory[] = [...HARDCODED_CATEGORIES];
+
+// Icon mapping for the four category types.
+const CATEGORY_ICON_MAP: Record<string, LicenseCategory["icon"]> = {
+  auto: "car",
+  motor: "motorcycle",
+  public1: "bus",
+  drycargo1: "truck",
+};
+
+// Maps a backend CourseCategory to the frontend LicenseCategory shape.
+function mapCourseCategory(cc: CourseCategory): LicenseCategory | null {
+  const id = cc.id as LicenseCategoryId;
+  if (!CATEGORY_ICON_MAP[id]) return null;
+  const idMap: Record<string, LicenseCategoryId> = {
+    auto: "auto",
+    motor: "motor",
+    public1: "public1",
+    drycargo1: "drycargo1",
+  };
+  const mappedId = idMap[id];
+  if (!mappedId) return null;
+
+  const iconMap: Record<string, LicenseCategory["icon"]> = {
+    car: "car",
+    motorcycle: "motorcycle",
+    bus: "bus",
+    truck: "truck",
+  };
+  const icon = CATEGORY_ICON_MAP[id];
+  if (!icon) return null;
+
+  const iconRequirementMap: Record<string, LicenseCategory["requirements"][0]["icon"]> = {
+    graduation: "graduation",
+    medical: "medical",
+    clock: "clock",
+    license: "license",
+  };
+
+  return {
+    id: mappedId,
+    title: cc.title,
+    subtitle: cc.subtitle,
+    price: cc.price,
+    durationDays: cc.duration_days,
+    icon,
+    requirements: (cc.requirements || []).map((r) => ({
+      text: r.text,
+      icon: iconRequirementMap[r.icon] || "graduation",
+    })),
+  };
+}
+
+// Fetches course categories from the backend and replaces the runtime
+// LICENSE_CATEGORIES array. Returns true on success, false if the API
+// call failed (fallback to hardcoded data). Call this once at app startup.
+export async function loadLicenseCategories(): Promise<boolean> {
+  try {
+    const result = await getCourseCategories();
+    if (!result.success || !result.data) return false;
+
+    const raw = Array.isArray(result.data) ? result.data : (result.data as { data?: unknown })?.data || [];
+    const mapped = (raw as CourseCategory[])
+      .map(mapCourseCategory)
+      .filter((c): c is LicenseCategory => c !== null);
+
+    if (mapped.length > 0) {
+      LICENSE_CATEGORIES = mapped;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export type EnrollmentProfile = {
+  firstNameEn: string;
+  fatherNameEn: string;
+  lastNameEn: string;
+  phone: string;
+  dateOfBirthEc: string;
+  bloodType: string;
+  address: string;
+  houseNumber: string;
+  kebele: string;
+  woreda: string;
+  subcity: string;
+  city: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+};
+
+export type EnrollmentDocumentKey = UploadSlot["key"];
+
+export type UploadedDocument = {
+  file: File;
+  preview: string | null;
+  name: string;
+  size: number;
+};
+
+export type EnrollmentState = {
+  profile: EnrollmentProfile;
+  categoryId: LicenseCategoryId | null;
+  documents: Partial<Record<EnrollmentDocumentKey, UploadedDocument>>;
+  paymentPhone: string;
+  paymentRequestSent: boolean;
+  currentStep: number;
+};
+
+export const ENROLLMENT_DRAFT_KEY = "dsas-enrollment-draft";
+
+export const REGISTRATION_FEE = 1500;
+
+export { LICENSE_CATEGORIES };
+
 export type EnrollmentDocumentRow = {
   key: EnrollmentDocumentKey;
   label: string;
@@ -158,9 +220,6 @@ export type EnrollmentDocumentRow = {
   acceptImages?: boolean;
 };
 
-// Human-readable descriptions for each upload slot, driven by the
-// UPLOAD_SLOTS array from src/lib/validations.ts but augmented with
-// context-specific explanations for the enrollment document step.
 const UPLOAD_SLOT_DESCRIPTIONS: Record<UploadSlot["key"], string> = {
   profile_photo: "Recent passport-size photo of the student",
   yellow_card: "Valid yellow health card document (optional)",
@@ -214,15 +273,12 @@ export function getCategoryById(id: LicenseCategoryId | null) {
   return LICENSE_CATEGORIES.find((c) => c.id === id) ?? null;
 }
 
-// Total fee = one-time registration fee + category-specific tuition.
 export function calculateEnrollmentTotal(categoryId: LicenseCategoryId | null) {
   const category = getCategoryById(categoryId);
   if (!category) return 0;
   return REGISTRATION_FEE + category.price;
 }
 
-// Formats a numeric amount as Ethiopian Birr (ETB) using en-US locale
-// with exactly two decimal places (e.g. "26,010.00").
 export function formatEtb(amount: number) {
   return amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,

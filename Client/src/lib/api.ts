@@ -275,6 +275,18 @@ export async function getBatches(): Promise<ApiResponse<Batch[]>> {
   }
 }
 
+// GET /api/v1/course_categories — returns enrollment course categories/pricing.
+export async function getCourseCategories(): Promise<ApiResponse<CourseCategory[]>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/course_categories`, { headers: authHeaders() });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Failed to fetch course categories" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
 // PATCH /api/v1/students/:id — updates a student's fields.
 export async function updateStudent(
   id: number,
@@ -392,4 +404,16 @@ export type Batch = {
   id: number;
   name: string;
   status: string;
+};
+
+// Type shape returned by GET /api/v1/course_categories.
+// Mirrors the structure in backend/config/course_categories.yml.
+export type CourseCategory = {
+  id: string;
+  title: string;
+  subtitle: string;
+  price: number;
+  duration_days: number;
+  registration_fee: number;
+  requirements: { text: string; icon: string }[];
 };

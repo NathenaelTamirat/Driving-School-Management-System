@@ -17,6 +17,7 @@ import {
   getToken,
   type User,
 } from "@/lib/api";
+import { loadLicenseCategories } from "@/lib/enrollment-types";
 
 type AuthContextValue = {
   user: User | null;
@@ -72,6 +73,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setIsLoading(false);
     });
+  }, []);
+
+  // Load license categories from backend once at startup.
+  // Falls back to hardcoded data if the API is unreachable.
+  useEffect(() => {
+    loadLicenseCategories();
   }, []);
 
   const value = useMemo(
