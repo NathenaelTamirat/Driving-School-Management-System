@@ -4,6 +4,7 @@ FactoryBot.define do
     status { "registered" }
     student_id { "STU#{Faker::Number.unique.number(digits: 6)}" }
     document_id { "DOC#{Faker::Number.unique.number(digits: 6)}" }
+    identification_document { %w[National_ID Kebele_ID Passport Birth_Certificate].sample }
     first_name { Faker::Name.first_name }
     middle_name { Faker::Name.middle_name }
     last_name { Faker::Name.last_name }

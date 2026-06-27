@@ -65,6 +65,7 @@ module Api
           :batch_id,
           :student_id,
           :document_id,
+          :identification_document,
           :first_name,
           :middle_name,
           :last_name,
