@@ -129,9 +129,7 @@ module Meklit
 
       # Send to individual students
       batch.students.find_each do |student|
-        # TODO: Add email field to student model and use student.email
-        # For now, using a placeholder email
-        student_email = "#{student.student_id}@example.com"
+        student_email = student.email.presence or raise "Student #{student.student_id} has no email"
         MeklitMailer.student_approval(student, student_email).deliver_later
       end
     rescue StandardError => e

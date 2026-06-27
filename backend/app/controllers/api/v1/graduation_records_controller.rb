@@ -10,6 +10,7 @@ module Api
       before_action :set_student
 
       def show
+        authorize GraduationRecord
         record = @student.graduation_record
         if record
           render_success(record)
@@ -19,6 +20,7 @@ module Api
       end
 
       def create
+        authorize GraduationRecord
         processor = Graduation::Processor.new(@student)
 
         if processor.call

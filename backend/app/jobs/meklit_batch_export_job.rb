@@ -40,13 +40,15 @@ class MeklitBatchExportJob < ApplicationJob
 
   private
 
-  # Schedule a retry with exponential backoff
+  # Schedule a retry with exponential backoff using a DB-backed counter
   def schedule_retry(batch_id)
-    # Retry with exponential backoff: 5min, 10min, 20min, 40min, then stop
-    retry_count = Redis.current.incr("meklit_retry:#{batch_id}") rescue 1
     max_retries = 5
+    batch = Batch.find(batch_id)
+    retry_count = batch.retry_count.to_i + 1
 
     return if retry_count > max_retries
+
+    batch.update_column(:retry_count, retry_count)
 
     delay = [ 5 * (2 ** (retry_count - 1)), 60 ].min # Max 60 minutes
     logger.info "[MeklitBatchExportJob] Scheduling retry #{retry_count}/#{max_retries} in #{delay} minutes"
