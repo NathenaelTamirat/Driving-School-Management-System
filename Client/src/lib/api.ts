@@ -47,6 +47,33 @@ import { UPLOAD_SLOTS } from "@/lib/validations";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 const DEFAULT_BATCH_ID = Number(process.env.NEXT_PUBLIC_DEFAULT_BATCH_ID || "1");
 
+/** Generic fetch wrapper that auto-attaches the JWT and normalises the response. */
+export async function apiFetch<T = unknown>(
+  path: string,
+  options?: RequestInit,
+): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers: { ...authHeaders(options?.headers as Record<string, string>), ...options?.headers },
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      return {
+        success: false,
+        error: json.error || "Request failed",
+        errors: json.errors,
+      };
+    }
+    return { success: true, data: json as T };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Network error",
+    };
+  }
+}
+
 // Generic POST /api/v1/students.
 // Accepts both plain objects (JSON-encoded) and FormData (file uploads).
 // Returns a normalised ApiResponse envelope so callers always handle
