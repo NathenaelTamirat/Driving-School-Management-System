@@ -94,6 +94,7 @@ export const studentSchema = z.object({
     .min(1, "Document ID is required")
     .max(20, "Document ID must be 20 characters or less"),
   verified: z.boolean(),
+  status: z.string().optional(),
 });
 
 export type StudentFormValues = z.infer<typeof studentSchema>;

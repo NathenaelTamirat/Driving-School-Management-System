@@ -10,6 +10,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { X, CheckCircle, Clock, User, Hash, MapPin, Droplets, GraduationCap, Gauge, Ban } from "lucide-react";
 import type { Student } from "@/lib/api";
 import { updateStudent } from "@/lib/api";
@@ -157,6 +158,9 @@ export function StudentDetailModal({ student, open, onClose, onVerified }: Props
 
         <div className="flex justify-end gap-3 border-t px-6 py-4">
           <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" asChild>
+            <Link href={`/students/${student.id}`}>View Full Profile</Link>
+          </Button>
           {!student.verified && (
             <Button onClick={handleVerify} disabled={verifying} className="bg-emerald-600 hover:bg-emerald-700">
               {verifying ? "Verifying..." : "Verify Student"}

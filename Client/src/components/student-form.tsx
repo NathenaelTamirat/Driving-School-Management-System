@@ -1,13 +1,3 @@
-// Standalone student creation form with a 3-step wizard flow:
-//   1. Student Info — name, DOB, blood type, address, IDs, verification status
-//   2. Documents — file uploads for each UPLOAD_SLOT (profile photo, grades, etc.)
-//   3. Review & Submit — read-only summary before POST to /api/v1/students
-//
-// Uses react-hook-form with Zod resolver for client-side validation matching
-// the Rails backend model rules. File uploads are managed locally via
-// uploadedFiles state and appended as multipart/form-data on submit.
-// On success, shows a success screen and resets all form state after 3s.
-
 "use client";
 
 import { useState, useCallback } from "react";
@@ -53,9 +43,10 @@ import {
   ACCEPTED_DOC_TYPES,
   MAX_FILE_SIZE,
 } from "@/lib/validations";
-import { createStudent } from "@/lib/api";
+import { createStudent, updateStudent } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { StudentFormValues } from "@/lib/validations";
+import type { Student } from "@/lib/api";
 
 type UploadedFile = {
   file: File;
@@ -66,8 +57,22 @@ type UploadedFile = {
 
 type FormStep = "info" | "documents" | "review";
 
-export function StudentForm() {
-  const [step, setStep] = useState<FormStep>("info");
+type Props = {
+  initialData?: Student;
+  onSuccess?: () => void;
+};
+
+const statusOptions = [
+  { value: "registered", label: "Registered" },
+  { value: "theory_in_progress", label: "Theory in Progress" },
+  { value: "practical_in_progress", label: "Practical in Progress" },
+  { value: "exam_eligible", label: "Exam Eligible" },
+  { value: "graduated", label: "Graduated" },
+];
+
+export function StudentForm({ initialData, onSuccess }: Props) {
+  const isEdit = !!initialData;
+  const [step, setStep] = useState<FormStep>(isEdit ? "info" : "info");
   const [uploadedFiles, setUploadedFiles] = useState<
     Record<string, UploadedFile | null>
   >({});
@@ -84,26 +89,45 @@ export function StudentForm() {
     formState: { errors },
   } = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema),
-    defaultValues: {
-      first_name: "",
-      middle_name: "",
-      last_name: "",
-      date_of_birth: "",
-      blood_type: "",
-      address: "",
-      house_number: "",
-      kebele: "",
-      woreda: "",
-      subcity: "",
-      city: "",
-      student_id: "",
-      document_id: "",
-      verified: false,
-    },
+    defaultValues: initialData
+      ? {
+          first_name: initialData.first_name,
+          middle_name: initialData.middle_name,
+          last_name: initialData.last_name,
+          date_of_birth: initialData.date_of_birth,
+          blood_type: initialData.blood_type,
+          address: initialData.address,
+          house_number: initialData.house_number,
+          kebele: initialData.kebele ?? "",
+          woreda: initialData.woreda,
+          subcity: initialData.subcity ?? "",
+          city: initialData.city,
+          student_id: initialData.student_id,
+          document_id: initialData.document_id,
+          verified: initialData.verified,
+          status: initialData.status,
+        }
+      : {
+          first_name: "",
+          middle_name: "",
+          last_name: "",
+          date_of_birth: "",
+          blood_type: "",
+          address: "",
+          house_number: "",
+          kebele: "",
+          woreda: "",
+          subcity: "",
+          city: "",
+          student_id: "",
+          document_id: "",
+          verified: false,
+        },
   });
 
   const watchedBloodType = watch("blood_type");
   const watchedVerified = watch("verified");
+  const watchedStatus = watch("status");
 
   const handleBloodTypeChange = useCallback(
     (value: string) => {
@@ -115,6 +139,13 @@ export function StudentForm() {
   const handleVerifiedChange = useCallback(
     (value: string) => {
       setValue("verified", value === "true", { shouldValidate: true });
+    },
+    [setValue],
+  );
+
+  const handleStatusChange = useCallback(
+    (value: string) => {
+      setValue("status", value, { shouldValidate: true });
     },
     [setValue],
   );
@@ -178,31 +209,45 @@ export function StudentForm() {
   const onSubmit = async (data: StudentFormValues) => {
     setServerError(null);
 
-    const fileErrors = validateFiles();
-    if (Object.keys(fileErrors).length > 0) {
-      const firstError = Object.values(fileErrors)[0];
-      toast.error(firstError);
-      setStep("documents");
-      return;
+    if (!isEdit) {
+      const fileErrors = validateFiles();
+      if (Object.keys(fileErrors).length > 0) {
+        const firstError = Object.values(fileErrors)[0];
+        toast.error(firstError);
+        setStep("documents");
+        return;
+      }
     }
 
     setIsSubmitting(true);
     try {
-      const formData = buildFormData(data, uploadedFiles);
-      const result = await createStudent(formData);
-
-      if (result.success) {
-        setSubmitSuccess(true);
-        toast.success("Student created successfully!");
-        reset();
-        setUploadedFiles({});
-        setTimeout(() => {
-          setSubmitSuccess(false);
-          setStep("info");
-        }, 3000);
+      if (isEdit) {
+        const payload: Record<string, unknown> = { ...data };
+        const result = await updateStudent(initialData.id, payload);
+        if (result.success) {
+          toast.success("Student updated successfully!");
+          onSuccess?.();
+        } else {
+          setServerError(result.error || "Failed to update student");
+          toast.error(result.error || "Failed to update student");
+        }
       } else {
-        setServerError(result.error || "Failed to create student");
-        toast.error(result.error || "Failed to create student");
+        const formData = buildFormData(data, uploadedFiles);
+        const result = await createStudent(formData);
+
+        if (result.success) {
+          setSubmitSuccess(true);
+          toast.success("Student created successfully!");
+          reset();
+          setUploadedFiles({});
+          setTimeout(() => {
+            setSubmitSuccess(false);
+            setStep("info");
+          }, 3000);
+        } else {
+          setServerError(result.error || "Failed to create student");
+          toast.error(result.error || "Failed to create student");
+        }
       }
     } catch {
       const msg = "Something went wrong. Please try again.";
@@ -223,12 +268,367 @@ export function StudentForm() {
     else if (step === "review") setStep("documents");
   };
 
-  const steps = [
-    { key: "info", label: "Student Info", icon: User },
-    { key: "documents", label: "Documents", icon: FileText },
-    { key: "review", label: "Review", icon: ShieldCheck },
-  ] as const;
+  const infoFields = (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <User className="h-5 w-5" />
+          Student Information
+        </CardTitle>
+        <CardDescription>
+          {isEdit ? "Edit the student's personal details." : "Enter the personal details of the student."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Name Fields */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="first_name">
+              First Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="first_name"
+              {...register("first_name")}
+              placeholder="Enter first name"
+              className={cn(errors.first_name && "border-destructive")}
+            />
+            {errors.first_name && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {errors.first_name.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="middle_name">
+              Middle Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="middle_name"
+              {...register("middle_name")}
+              placeholder="Enter middle name"
+              className={cn(errors.middle_name && "border-destructive")}
+            />
+            {errors.middle_name && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {errors.middle_name.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="last_name">
+              Last Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="last_name"
+              {...register("last_name")}
+              placeholder="Enter last name"
+              className={cn(errors.last_name && "border-destructive")}
+            />
+            {errors.last_name && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {errors.last_name.message}
+              </p>
+            )}
+          </div>
+        </div>
 
+        {/* DOB & Blood Type */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="date_of_birth">
+              Date of Birth <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="date_of_birth"
+              type="date"
+              {...register("date_of_birth")}
+              className={cn(
+                errors.date_of_birth && "border-destructive",
+              )}
+            />
+            {errors.date_of_birth && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {errors.date_of_birth.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="blood_type">
+              Blood Type <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={watchedBloodType}
+              onValueChange={handleBloodTypeChange}
+            >
+              <SelectTrigger
+                id="blood_type"
+                className={cn(errors.blood_type && "border-destructive")}
+              >
+                <SelectValue placeholder="Select blood type" />
+              </SelectTrigger>
+              <SelectContent>
+                {BLOOD_TYPE_OPTIONS.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.blood_type && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {errors.blood_type.message}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Address Fields */}
+        <div>
+          <h3 className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <MapPin className="h-4 w-4" />
+            Address Information
+          </h3>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="address">
+                Address <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="address"
+                {...register("address")}
+                placeholder="Street address"
+                className={cn(errors.address && "border-destructive")}
+              />
+              {errors.address && (
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.address.message}
+                </p>
+              )}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="house_number">
+                  House Number{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="house_number"
+                  {...register("house_number")}
+                  placeholder="House number"
+                  className={cn(
+                    errors.house_number && "border-destructive",
+                  )}
+                />
+                {errors.house_number && (
+                  <p className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.house_number.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="kebele">Kebele</Label>
+                <Input
+                  id="kebele"
+                  {...register("kebele")}
+                  placeholder="Kebele"
+                  className={cn(errors.kebele && "border-destructive")}
+                />
+                {errors.kebele && (
+                  <p className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.kebele.message}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="woreda">
+                  Woreda <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="woreda"
+                  {...register("woreda")}
+                  placeholder="Woreda"
+                  className={cn(errors.woreda && "border-destructive")}
+                />
+                {errors.woreda && (
+                  <p className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.woreda.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subcity">Subcity</Label>
+                <Input
+                  id="subcity"
+                  {...register("subcity")}
+                  placeholder="Subcity"
+                  className={cn(errors.subcity && "border-destructive")}
+                />
+                {errors.subcity && (
+                  <p className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.subcity.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">
+                  City / Town{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="city"
+                  {...register("city")}
+                  placeholder="City or town"
+                  className={cn(errors.city && "border-destructive")}
+                />
+                {errors.city && (
+                  <p className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.city.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* ID Fields */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="student_id">
+              Student ID <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="student_id"
+              {...register("student_id")}
+              placeholder="Student ID"
+              className={cn(errors.student_id && "border-destructive")}
+            />
+            {errors.student_id && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {errors.student_id.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="document_id">
+              Document ID <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="document_id"
+              {...register("document_id")}
+              placeholder="Document ID"
+              className={cn(
+                errors.document_id && "border-destructive",
+              )}
+            />
+            {errors.document_id && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {errors.document_id.message}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Status */}
+        {isEdit && (
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={watchedStatus}
+              onValueChange={handleStatusChange}
+            >
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Verified Status */}
+        <div className="space-y-2">
+          <Label>Verification Status</Label>
+          <Select
+            value={watchedVerified ? "true" : "false"}
+            onValueChange={handleVerifiedChange}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="false">
+                Pending Verification
+              </SelectItem>
+              <SelectItem value="true">Verified</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  // Edit mode: simple single-page form
+  if (isEdit) {
+    return (
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {infoFields}
+
+        {serverError && (
+          <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            {serverError}
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isSubmitting}
+            className="min-w-[160px]"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
+  // Create mode: existing 3-step wizard
   if (submitSuccess) {
     return (
       <motion.div
@@ -249,6 +649,12 @@ export function StudentForm() {
       </motion.div>
     );
   }
+
+  const steps = [
+    { key: "info", label: "Student Info", icon: User },
+    { key: "documents", label: "Documents", icon: FileText },
+    { key: "review", label: "Review", icon: ShieldCheck },
+  ] as const;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -293,304 +699,7 @@ export function StudentForm() {
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.2 }}
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Student Information
-                </CardTitle>
-                <CardDescription>
-                  Enter the personal details of the student.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Name Fields */}
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="first_name">
-                      First Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="first_name"
-                      {...register("first_name")}
-                      placeholder="Enter first name"
-                      className={cn(errors.first_name && "border-destructive")}
-                    />
-                    {errors.first_name && (
-                      <p className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertCircle className="h-3 w-3" />
-                        {errors.first_name.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="middle_name">
-                      Middle Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="middle_name"
-                      {...register("middle_name")}
-                      placeholder="Enter middle name"
-                      className={cn(errors.middle_name && "border-destructive")}
-                    />
-                    {errors.middle_name && (
-                      <p className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertCircle className="h-3 w-3" />
-                        {errors.middle_name.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="last_name">
-                      Last Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="last_name"
-                      {...register("last_name")}
-                      placeholder="Enter last name"
-                      className={cn(errors.last_name && "border-destructive")}
-                    />
-                    {errors.last_name && (
-                      <p className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertCircle className="h-3 w-3" />
-                        {errors.last_name.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* DOB & Blood Type */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="date_of_birth">
-                      Date of Birth <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="date_of_birth"
-                      type="date"
-                      {...register("date_of_birth")}
-                      className={cn(
-                        errors.date_of_birth && "border-destructive",
-                      )}
-                    />
-                    {errors.date_of_birth && (
-                      <p className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertCircle className="h-3 w-3" />
-                        {errors.date_of_birth.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="blood_type">
-                      Blood Type <span className="text-destructive">*</span>
-                    </Label>
-                    <Select
-                      value={watchedBloodType}
-                      onValueChange={handleBloodTypeChange}
-                    >
-                      <SelectTrigger
-                        id="blood_type"
-                        className={cn(errors.blood_type && "border-destructive")}
-                      >
-                        <SelectValue placeholder="Select blood type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {BLOOD_TYPE_OPTIONS.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.blood_type && (
-                      <p className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertCircle className="h-3 w-3" />
-                        {errors.blood_type.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Address Fields */}
-                <div>
-                  <h3 className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    Address Information
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="address">
-                        Address <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="address"
-                        {...register("address")}
-                        placeholder="Street address"
-                        className={cn(errors.address && "border-destructive")}
-                      />
-                      {errors.address && (
-                        <p className="flex items-center gap-1 text-xs text-destructive">
-                          <AlertCircle className="h-3 w-3" />
-                          {errors.address.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="house_number">
-                          House Number{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="house_number"
-                          {...register("house_number")}
-                          placeholder="House number"
-                          className={cn(
-                            errors.house_number && "border-destructive",
-                          )}
-                        />
-                        {errors.house_number && (
-                          <p className="flex items-center gap-1 text-xs text-destructive">
-                            <AlertCircle className="h-3 w-3" />
-                            {errors.house_number.message}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="kebele">Kebele</Label>
-                        <Input
-                          id="kebele"
-                          {...register("kebele")}
-                          placeholder="Kebele"
-                          className={cn(errors.kebele && "border-destructive")}
-                        />
-                        {errors.kebele && (
-                          <p className="flex items-center gap-1 text-xs text-destructive">
-                            <AlertCircle className="h-3 w-3" />
-                            {errors.kebele.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="woreda">
-                          Woreda <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="woreda"
-                          {...register("woreda")}
-                          placeholder="Woreda"
-                          className={cn(errors.woreda && "border-destructive")}
-                        />
-                        {errors.woreda && (
-                          <p className="flex items-center gap-1 text-xs text-destructive">
-                            <AlertCircle className="h-3 w-3" />
-                            {errors.woreda.message}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="subcity">Subcity</Label>
-                        <Input
-                          id="subcity"
-                          {...register("subcity")}
-                          placeholder="Subcity"
-                          className={cn(errors.subcity && "border-destructive")}
-                        />
-                        {errors.subcity && (
-                          <p className="flex items-center gap-1 text-xs text-destructive">
-                            <AlertCircle className="h-3 w-3" />
-                            {errors.subcity.message}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="city">
-                          City / Town{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="city"
-                          {...register("city")}
-                          placeholder="City or town"
-                          className={cn(errors.city && "border-destructive")}
-                        />
-                        {errors.city && (
-                          <p className="flex items-center gap-1 text-xs text-destructive">
-                            <AlertCircle className="h-3 w-3" />
-                            {errors.city.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* ID Fields */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="student_id">
-                      Student ID <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="student_id"
-                      {...register("student_id")}
-                      placeholder="Student ID"
-                      className={cn(errors.student_id && "border-destructive")}
-                    />
-                    {errors.student_id && (
-                      <p className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertCircle className="h-3 w-3" />
-                        {errors.student_id.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="document_id">
-                      Document ID <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="document_id"
-                      {...register("document_id")}
-                      placeholder="Document ID"
-                      className={cn(
-                        errors.document_id && "border-destructive",
-                      )}
-                    />
-                    {errors.document_id && (
-                      <p className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertCircle className="h-3 w-3" />
-                        {errors.document_id.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Verified Status */}
-                <div className="space-y-2">
-                  <Label>Verification Status</Label>
-                  <Select
-                    value={watchedVerified ? "true" : "false"}
-                    onValueChange={handleVerifiedChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="false">
-                        Pending Verification
-                      </SelectItem>
-                      <SelectItem value="true">Verified</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+            {infoFields}
 
             <div className="mt-6 flex justify-end">
               <Button type="button" onClick={nextStep} size="lg">

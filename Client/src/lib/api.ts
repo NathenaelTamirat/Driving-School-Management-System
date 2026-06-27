@@ -242,10 +242,17 @@ export async function submitEnrollmentFormData(
 // GET /api/v1/students — returns the full student list.
 export async function getStudents(): Promise<ApiResponse<Student[]>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/students`, { headers: authHeaders() });
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.per_page) query.set("per_page", String(params.per_page));
+    if (params?.search) query.set("search", params.search);
+    if (params?.status) query.set("status", params.status);
+    const qs = query.toString();
+    const url = `${API_BASE_URL}/api/v1/students${qs ? `?${qs}` : ""}`;
+    const response = await fetch(url, { headers: authHeaders() });
     const json = await response.json();
     if (!response.ok) return { success: false, error: json.error || "Failed to fetch students" };
-    return { success: true, data: json };
+    return { success: true, data: json.data ?? json };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Network error" };
   }
