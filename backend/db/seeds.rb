@@ -68,3 +68,55 @@ if defined?(User)
 end
 
 puts "Done. Batches=#{Batch.count} Students=#{Student.count}"
+
+# ========================================
+# Finance Module - Courses Seed Data
+# ========================================
+if defined?(Course)
+  puts "\n📚 Seeding Courses for Finance Module..."
+
+  courses_data = [
+    {
+      name: 'Standard Driving Course',
+      description: 'Standard pace driving instruction covering theory and practical training over 12 weeks',
+      course_code: 'STD-2024',
+      standard_price: 8000.00,
+      premium_price: 10000.00,
+      fast_track_price: 13000.00,
+      duration_weeks: 12,
+      theory_hours: 35,
+      practical_hours: 52
+    },
+    {
+      name: 'Premium Driving Course',
+      description: 'Premium pace driving instruction with additional support and flexible scheduling',
+      course_code: 'PRM-2024',
+      standard_price: 8000.00,
+      premium_price: 10000.00,
+      fast_track_price: 13000.00,
+      duration_weeks: 10,
+      theory_hours: 35,
+      practical_hours: 52
+    },
+    {
+      name: 'Fast Track Driving Course',
+      description: 'Accelerated driving course with intensive training for quick certification',
+      course_code: 'FTK-2024',
+      standard_price: 8000.00,
+      premium_price: 10000.00,
+      fast_track_price: 13000.00,
+      duration_weeks: 8,
+      theory_hours: 35,
+      practical_hours: 52
+    }
+  ]
+
+  courses_data.each do |course_attrs|
+    course = Course.find_or_create_by!(course_code: course_attrs[:course_code]) do |c|
+      c.assign_attributes(course_attrs)
+    end
+    puts "  ✓ Seeded course: #{course.name} (#{course.course_code})"
+  end
+
+  puts "Courses seeded: #{Course.count} total"
+end

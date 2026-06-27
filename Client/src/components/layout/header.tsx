@@ -1,19 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Sun, Moon, LogOut } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
+import { Sun, Moon, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/use-auth";
 
-export function Header() {
+const roleLabels: Record<string, string> = {
+  admin: "Admin",
+  clerk: "Clerk",
+  instructor: "Instructor",
+};
+
+const roleBadgeVariant: Record<string, "default" | "secondary" | "success"> = {
+  admin: "default",
+  clerk: "secondary",
+  instructor: "success",
+};
+
+export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { resolvedTheme, setTheme } = useTheme();
   const { user, logout } = useAuth();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const initials = user?.full_name
     ? user.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -24,48 +31,57 @@ export function Header() {
     : "";
 
   return (
-    <header className="flex h-16 items-center justify-end gap-3 border-b border-border bg-card px-6">
-      {user && (
-        <div className="mr-auto flex items-center gap-3">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground"
-            title={user.full_name}
-          >
-            {initials}
-          </div>
-          <div className="hidden flex-col sm:flex">
-            <span className="text-sm font-medium leading-tight text-foreground">
+    <header className="flex h-16 items-center justify-between gap-4 border-b border-border bg-card px-4 md:px-6">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuClick}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground lg:hidden"
+          aria-label="Open menu"
+          type="button"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <h2 className="text-lg font-semibold text-foreground">
+          Driving School Admin
+        </h2>
+      </div>
+
+      <div className="flex items-center gap-2 md:gap-3">
+        {user && (
+          <>
+            <span className="hidden text-sm font-medium text-foreground sm:inline">
               {user.full_name}
             </span>
-            <span className="text-xs leading-tight text-muted-foreground">
-              {roleLabel}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <button
-        onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        aria-label="Toggle theme"
-        type="button"
-      >
-        {mounted && resolvedTheme === "dark" ? (
-          <Sun className="h-5 w-5" />
-        ) : (
-          <Moon className="h-5 w-5" />
+            <Badge variant={roleBadgeVariant[user.role] ?? "secondary"}>
+              {roleLabels[user.role] ?? user.role}
+            </Badge>
+          </>
         )}
-      </button>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={logout}
-        className="gap-2 text-muted-foreground hover:text-foreground"
-      >
-        <LogOut className="h-4 w-4" />
-        <span className="hidden sm:inline">Sign out</span>
-      </Button>
+        <button
+          onClick={() =>
+            setTheme(resolvedTheme === "dark" ? "light" : "dark")
+          }
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          aria-label="Toggle theme"
+          type="button"
+        >
+          {resolvedTheme === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
+        </button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={logout}
+          aria-label="Logout"
+        >
+          <LogOut className="h-5 w-5" />
+        </Button>
+      </div>
     </header>
   );
 }

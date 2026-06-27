@@ -1,37 +1,17 @@
-// Profile step — the first page of the enrollment wizard.
-// Collects personal info (name, phone, DOB, blood type), address (with
-// Ethiopian administrative divisions: woreda, kebele, subcity, city),
-// and emergency contact. All fields use react-hook-form with the
-// profileStepSchema Zod validator (see enrollment-validations.ts).
-// The phone input renders a +251 prefix badge on the left. A "Save Draft"
-// button persists the current profile (without files) to localStorage via
-// the EnrollmentProvider. The "Loading…" guard before draftLoaded ensures
-// the form is hydrated from localStorage before rendering to prevent
-// stale default values.
-
 "use client";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Calendar, MapPin } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowRight, Calendar, Mail, MapPin, Phone, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useEnrollment } from "@/components/enrollment/enrollment-provider";
 import {
   profileStepSchema,
   type ProfileStepValues,
 } from "@/lib/enrollment-validations";
-import { BLOOD_TYPE_OPTIONS } from "@/lib/validations";
 import { cn } from "@/lib/utils";
 
 type ProfileStepProps = {
@@ -39,7 +19,7 @@ type ProfileStepProps = {
 };
 
 export function ProfileStep({ onContinue }: ProfileStepProps) {
-  const { state, updateProfile, saveDraft, draftLoaded } = useEnrollment();
+  const { formData, updateFormData, draftLoaded } = useEnrollment();
 
   if (!draftLoaded) {
     return (
@@ -51,50 +31,35 @@ export function ProfileStep({ onContinue }: ProfileStepProps) {
 
   return (
     <ProfileStepForm
-      key={JSON.stringify(state.profile)}
-      profile={state.profile}
+      key={JSON.stringify(formData)}
+      formData={formData}
       onContinue={onContinue}
-      updateProfile={updateProfile}
-      saveDraft={saveDraft}
+      updateFormData={updateFormData}
     />
   );
 }
 
 function ProfileStepForm({
-  profile,
+  formData,
   onContinue,
-  updateProfile,
-  saveDraft,
+  updateFormData,
 }: {
-  profile: ProfileStepValues;
+  formData: ProfileStepValues;
   onContinue: () => void;
-  updateProfile: (profile: Partial<ProfileStepValues>) => void;
-  saveDraft: () => void;
+  updateFormData: (data: Partial<ProfileStepValues>) => void;
 }) {
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm<ProfileStepValues>({
     resolver: zodResolver(profileStepSchema),
-    defaultValues: profile,
+    defaultValues: formData,
   });
 
-  const watchedBloodType = watch("bloodType");
-
   const onSubmit = (data: ProfileStepValues) => {
-    updateProfile(data);
+    updateFormData(data);
     onContinue();
-  };
-
-  const handleSaveDraft = () => {
-    handleSubmit((data) => {
-      updateProfile(data);
-      saveDraft();
-      toast.success("Draft saved locally");
-    })();
   };
 
   return (
@@ -105,149 +70,80 @@ function ProfileStepForm({
         </h2>
 
         <div className="mt-6 grid gap-5 sm:grid-cols-2">
-          <Field label="First Name (English)" error={errors.firstNameEn?.message} required>
-            <Input
-              {...register("firstNameEn")}
-              placeholder="e.g. Abebe"
-              className={fieldClass(errors.firstNameEn)}
-            />
+          <Field label="First Name" error={errors.firstName?.message} required>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                {...register("firstName")}
+                placeholder="e.g. Abebe"
+                className={cn("pl-10", fieldClass(errors.firstName))}
+              />
+            </div>
           </Field>
-          <Field label="Father's Name (English)" error={errors.fatherNameEn?.message} required>
-            <Input
-              {...register("fatherNameEn")}
-              placeholder="e.g. Kebede"
-              className={fieldClass(errors.fatherNameEn)}
-            />
+
+          <Field label="Last Name" error={errors.lastName?.message} required>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                {...register("lastName")}
+                placeholder="e.g. Tadesse"
+                className={cn("pl-10", fieldClass(errors.lastName))}
+              />
+            </div>
           </Field>
-          <Field label="Grandfather's Name (English)" error={errors.lastNameEn?.message} required>
-            <Input
-              {...register("lastNameEn")}
-              placeholder="e.g. Tadesse"
-              className={fieldClass(errors.lastNameEn)}
-            />
+
+          <Field label="Email Address" error={errors.email?.message} required>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                {...register("email")}
+                type="email"
+                placeholder="e.g. abebe@example.com"
+                className={cn("pl-10", fieldClass(errors.email))}
+              />
+            </div>
           </Field>
 
           <Field label="Phone Number" error={errors.phone?.message} required>
-            <div className="flex overflow-hidden rounded-md border border-input bg-[#f8fafc]">
-              <span className="flex items-center border-r border-input bg-slate-50 px-3 text-sm text-slate-600">
-                +251
-              </span>
+            <div className="relative">
+              <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 {...register("phone")}
-                placeholder="911 23 45 67"
-                className="border-0 bg-transparent shadow-none focus-visible:ring-0"
+                placeholder="0912345678"
+                className={cn("pl-10", fieldClass(errors.phone))}
               />
             </div>
           </Field>
 
-          <Field label="Date of Birth (EC)" error={errors.dateOfBirthEc?.message} required>
+          <Field label="Date of Birth" error={errors.dateOfBirth?.message} required>
             <div className="relative">
               <Input
-                {...register("dateOfBirthEc")}
+                {...register("dateOfBirth")}
                 type="date"
-                className={cn("pr-10", fieldClass(errors.dateOfBirthEc))}
+                className={cn("pr-10", fieldClass(errors.dateOfBirth))}
               />
               <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             </div>
-          </Field>
-
-          <Field label="Blood Type" error={errors.bloodType?.message} required>
-            <Select
-              value={watchedBloodType}
-              onValueChange={(value) =>
-                setValue("bloodType", value, { shouldValidate: true })
-              }
-            >
-              <SelectTrigger className={fieldClass(errors.bloodType)}>
-                <SelectValue placeholder="Select blood type" />
-              </SelectTrigger>
-              <SelectContent>
-                {BLOOD_TYPE_OPTIONS.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </Field>
         </div>
 
         <h2 className="mt-10 flex items-center gap-2 font-serif text-xl font-bold text-[#0f172a]">
           <MapPin className="h-5 w-5" />
-          Address Information
+          Address
         </h2>
 
-        <div className="mt-6 grid gap-5 sm:grid-cols-2">
-          <Field label="Address" error={errors.address?.message} required className="sm:col-span-2">
+        <div className="mt-6 grid gap-5 sm:grid-cols-1">
+          <Field label="Address" error={errors.address?.message} required>
             <Input
               {...register("address")}
-              placeholder="Street address"
+              placeholder="Street address, city, postal code"
               className={fieldClass(errors.address)}
-            />
-          </Field>
-          <Field label="House Number" error={errors.houseNumber?.message} required>
-            <Input
-              {...register("houseNumber")}
-              placeholder="House number"
-              className={fieldClass(errors.houseNumber)}
-            />
-          </Field>
-          <Field label="Kebele" error={errors.kebele?.message}>
-            <Input
-              {...register("kebele")}
-              placeholder="Kebele"
-              className={fieldClass(errors.kebele)}
-            />
-          </Field>
-          <Field label="Woreda" error={errors.woreda?.message} required>
-            <Input
-              {...register("woreda")}
-              placeholder="Woreda"
-              className={fieldClass(errors.woreda)}
-            />
-          </Field>
-          <Field label="Subcity" error={errors.subcity?.message}>
-            <Input
-              {...register("subcity")}
-              placeholder="Subcity"
-              className={fieldClass(errors.subcity)}
-            />
-          </Field>
-          <Field label="City / Town" error={errors.city?.message} required>
-            <Input
-              {...register("city")}
-              placeholder="City or town"
-              className={fieldClass(errors.city)}
-            />
-          </Field>
-        </div>
-
-        <h2 className="mt-10 font-serif text-xl font-bold text-[#0f172a]">
-          Emergency Contact
-        </h2>
-
-        <div className="mt-6 grid gap-5 sm:grid-cols-2">
-          <Field label="Contact Name" error={errors.emergencyContactName?.message} required>
-            <Input
-              {...register("emergencyContactName")}
-              placeholder="Full Name"
-              className={fieldClass(errors.emergencyContactName)}
-            />
-          </Field>
-          <Field label="Contact Phone" error={errors.emergencyContactPhone?.message} required>
-            <Input
-              {...register("emergencyContactPhone")}
-              placeholder="Phone Number"
-              className={fieldClass(errors.emergencyContactPhone)}
             />
           </Field>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-6">
-        <Button type="button" variant="outline" onClick={handleSaveDraft}>
-          Save Draft
-        </Button>
         <Button type="submit" className="bg-[#2563eb] hover:bg-[#1d4ed8]">
           Continue to Category
           <ArrowRight className="h-4 w-4" />

@@ -1,19 +1,46 @@
-# examples:
-#   periodic_cleanup:
-#     class: CleanSoftDeletedRecordsJob
-#     queue: background
-#     args: [ 1000, { batch_size: 500 } ]
-#     schedule: every hour
-#   periodic_cleanup_with_command:
-#     command: "SoftDeletedRecord.due.delete_all"
-#     priority: 2
-#     schedule: at 5am every day
+# Solid Queue Recurring Jobs Configuration
+# Documentation: https://github.com/basecamp/solid_queue#recurring-tasks
 
+# Production schedule - runs in production environment
 production:
-  clear_solid_queue_finished_jobs:
-    command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
-    schedule: every hour at minute 12
+  # Attendance Breach Scanner - Daily at 2:00 AM
+  attendance_breach_scan:
+    class: AttendanceBreachScanJob
+    schedule: "0 2 * * *"  # Cron format: minute hour day month weekday
+    queue: default
+    
+  # Payroll Calculator - Monthly on 1st day at 3:00 AM
+  payroll_compute:
+    class: PayrollComputeJob
+    schedule: "0 3 1 * *"  # Runs at 3:00 AM on the 1st of every month
+    queue: default
 
-  cleanup_expired_jwt_tokens:
-    command: "JwtDenylist.cleanup_expired_tokens"
-    schedule: every hour at minute 30
+  # Payment Reconciliation - Daily at 11:00 PM
+  payment_reconciliation:
+    class: PaymentReconciliationJob
+    schedule: "0 23 * * *"  # Runs at 11:00 PM every day
+    queue: default
+
+# Development schedule - for testing recurring jobs locally
+development:
+  # Attendance Breach Scanner - Every hour for testing
+  attendance_breach_scan:
+    class: AttendanceBreachScanJob
+    schedule: "0 * * * *"  # Every hour at minute 0
+    queue: default
+    
+  # Payroll Calculator - Daily at midnight for testing
+  payroll_compute:
+    class: PayrollComputeJob
+    schedule: "0 0 * * *"  # Daily at midnight
+    queue: default
+
+  # Payment Reconciliation - Every 6 hours for testing
+  payment_reconciliation:
+    class: PaymentReconciliationJob
+    schedule: "0 */6 * * *"  # Every 6 hours
+    queue: default
+
+# Test environment - no recurring jobs
+test:
+  # Empty - recurring jobs disabled in test environment

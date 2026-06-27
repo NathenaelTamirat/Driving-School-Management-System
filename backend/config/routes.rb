@@ -25,6 +25,9 @@ Rails.application.routes.draw do
       resources :batches, only: [ :index, :show, :create ]
       resources :license_categories, only: [ :index ]
       resources :students, only: [ :index, :show, :create ] do
+        # Student-specific invoices (Finance Module)
+        get 'invoices', to: 'invoices#student_invoices'
+        
         # LMS module
         get "lms_progress", to: "lms_progress#show"
         resources :attendance_logs, only: [ :index, :create ]
@@ -40,6 +43,21 @@ Rails.application.routes.draw do
         resources :attendance_logs, only: [ :index, :create ]
         resources :mock_tests, only: [ :index, :create ]
         resource :lms_progress, only: [ :show ]
+      end
+
+      # Finance Module - Invoice management
+      resources :invoices, only: [ :index, :show ] do
+        post :mark_paid, on: :member
+      end
+
+      # Finance Module - Financial Reports
+      namespace :financial_reports do
+        get :summary
+        get :revenue
+        get :collections
+        get :monthly_comparison
+        get :export
+        post :reconcile
       end
     end
   end
