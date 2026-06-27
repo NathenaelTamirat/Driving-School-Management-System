@@ -43,6 +43,24 @@ module Api
         render_success({}, message: "Logout successful")
       end
 
+      # POST /api/v1/auth/refresh
+      # Denylists the current token and issues a new one with a fresh 1-hour
+      # expiry. Call this before the token expires to keep the session alive
+      # without requiring the user to re-enter credentials.
+      # Requires a valid (not yet expired) token in the Authorization header.
+      def refresh
+        old_token = request.headers["Authorization"]&.split(" ")&.last
+        if old_token
+          payload, = Warden::JWTAuth::TokenDecoder.new.call(old_token)
+          JwtDenylist.revoke_jwt(payload, current_user) if payload
+        end
+
+        render_success(
+          { user: user_response(current_user), token: jwt_for(current_user) },
+          message: "Token refreshed"
+        )
+      end
+
       # GET /api/v1/auth/me
       def me
         render_success({ user: user_response(current_user) }, message: "Current user retrieved")

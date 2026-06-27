@@ -342,6 +342,46 @@ export async function logout(): Promise<ApiResponse> {
   }
 }
 
+// POST /api/v1/auth/refresh — issues a new token with a fresh 1-hour expiry.
+// Call this before the current token expires to keep the session alive.
+export async function refreshToken(): Promise<ApiResponse<{ user: User; token: string }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      clearToken();
+      return { success: false, error: json.error || "Token refresh failed" };
+    }
+    if (json.data?.token) setToken(json.data.token);
+    return { success: true, data: json.data };
+  } catch (err) {
+    clearToken();
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// Decodes the payload of a JWT without verifying the signature.
+// Returns null if the token is malformed.
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    return JSON.parse(atob(parts[1]));
+  } catch {
+    return null;
+  }
+}
+
+/** Returns the number of seconds until the JWT expires, or 0 if unreadable. */
+export function getJwtExpiresIn(token: string): number {
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") return 0;
+  return Math.max(0, payload.exp - Math.floor(Date.now() / 1000));
+}
+
 // GET /api/v1/auth/me
 export async function getMe(): Promise<ApiResponse<{ user: User }>> {
   try {

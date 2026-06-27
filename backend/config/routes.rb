@@ -17,6 +17,7 @@ Rails.application.routes.draw do
       post   "auth/login",    to: "auth#login"
       post   "auth/register", to: "auth#register"
       delete "auth/logout",   to: "auth#logout"
+      post   "auth/refresh",  to: "auth#refresh"
       get    "auth/me",       to: "auth#me"
 
       # User management (admin-managed via UserPolicy)
