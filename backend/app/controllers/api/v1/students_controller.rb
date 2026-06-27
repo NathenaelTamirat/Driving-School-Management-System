@@ -10,7 +10,7 @@ module Api
         authorize Student
         page     = params.fetch(:page, 1).to_i
         per_page = params.fetch(:per_page, 50).to_i.clamp(1, 200)
-        @students = Student.order(:created_at).page(page).per(per_page)
+        @students = Student.order(:created_at).page(page).per(per_page).includes(:batch)
         render_success({
           students: @students.as_json,
           meta: { page: page, per_page: per_page, total: Student.count }
@@ -67,6 +67,7 @@ module Api
           :email,
           :verified,
           :verified_at,
+          :license_category,
           :theory_days_completed,
           :practical_days_completed,
           :mock_test_score,

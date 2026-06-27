@@ -59,6 +59,8 @@ module Api
         authorize @exam_booking
         result_params = params.require(:exam_booking).permit(:score, :notes)
 
+        committed = false
+
         ActiveRecord::Base.transaction do
           @exam_booking.complete!(result_params[:score], result_params[:notes])
 
@@ -66,12 +68,21 @@ module Api
             penalty_engine = Penalty::PenaltyEngine.new(@student, @exam_booking)
             raise ActiveRecord::Rollback unless penalty_engine.apply_failure_penalty
           end
+
+          committed = true
         end
 
-        # Send exam result notification email (outside the transaction — email delivery must not roll back)
-        send_exam_result_email
-
-        render_success(@exam_booking)
+        if committed
+          # Send exam result notification email (outside the transaction — email
+          # delivery must not roll back with the DB transaction)
+          send_exam_result_email
+          render_success(@exam_booking.reload)
+        else
+          render_error(
+            "Failed to record exam result — penalty could not be applied",
+            status: :unprocessable_entity
+          )
+        end
       rescue ActiveRecord::RecordNotFound
         render_error("Exam booking not found", status: :not_found, code: "NOT_FOUND")
       rescue ActiveRecord::RecordInvalid => e

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_25_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_26_140002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -19,6 +19,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_25_120100) do
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.text "rejection_reason"
+    t.integer "retry_count", default: 0, null: false
     t.string "status", default: "pending"
     t.datetime "submitted_at"
     t.datetime "updated_at", null: false
@@ -39,6 +40,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_25_120100) do
     t.index ["scheduled_date"], name: "index_exam_bookings_on_scheduled_date"
     t.index ["status"], name: "index_exam_bookings_on_status"
     t.index ["student_id"], name: "index_exam_bookings_on_student_id"
+    t.index ["student_id", "exam_type", "status"], name: "index_exam_bookings_on_student_exam_type_status"
   end
 
   create_table "jwt_denylist", force: :cascade do |t|
@@ -62,6 +64,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_25_120100) do
     t.string "kebele"
     t.date "last_attendance_date"
     t.string "last_name"
+    t.string "license_category"
     t.string "middle_name"
     t.integer "mock_test_score", default: 0
     t.datetime "penalty_end_date"
@@ -81,6 +84,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_25_120100) do
     t.string "woreda"
     t.index ["batch_id"], name: "index_students_on_batch_id"
     t.index ["document_id"], name: "index_students_on_document_id", unique: true
+    t.index ["license_category"], name: "index_students_on_license_category"
     t.index ["penalty_end_date"], name: "index_students_on_penalty_end_date"
     t.index ["student_id"], name: "index_students_on_student_id", unique: true
     t.index ["under_penalty"], name: "index_students_on_under_penalty"

@@ -45,14 +45,12 @@ module Meklit
     end
 
     # Validate all required documents are present
-    # TODO: Implement document validation once ActiveStorage is set up
     def validate_documents
-      # Placeholder for document validation
-      # REQUIRED_DOCUMENTS.each do |doc_type|
-      #   unless document_present?(doc_type)
-      #     errors << "Missing required document: #{doc_type.humanize}"
-      #   end
-      # end
+      REQUIRED_DOCUMENTS.each do |doc_type|
+        unless document_present?(doc_type)
+          errors << "Missing required document: #{doc_type.humanize}"
+        end
+      end
     end
 
     # Validate training completion requirements
@@ -70,13 +68,9 @@ module Meklit
       end
     end
 
-    # Check if a document type is present for the student
-    # This assumes documents are stored as attributes or through an association
-    # Adjust based on actual document storage implementation
+    # Check if a document type is present for the student via ActiveStorage.
     def document_present?(doc_type)
-      # Implementation depends on how documents are stored
-      # Assuming student has document attributes or a documents association
-      student.respond_to?("#{doc_type}_present?") ? student.send("#{doc_type}_present?") : true
+      student.respond_to?(doc_type) && student.send(doc_type).attached?
     end
   end
 end

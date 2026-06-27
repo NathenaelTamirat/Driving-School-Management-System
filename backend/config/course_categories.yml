@@ -1,0 +1,61 @@
+# Enrollment course categories (the school's course packages offered to students).
+# These differ from license_categories.yml which lists government license classes.
+# Served via CourseCategoriesController at GET /api/v1/course_categories.
+# This is the single source of truth for frontend pricing; do NOT hardcode prices on the client.
+
+categories:
+  - id: "auto"
+    title: "Auto (Automobile)"
+    subtitle: "Category B - Private Manual"
+    price: 26010
+    duration_days: 45
+    registration_fee: 1500
+    requirements:
+      - text: "Minimum 4th Grade"
+        icon: "graduation"
+      - text: "Medical Certificate Required"
+        icon: "medical"
+      - text: "45 Days Duration"
+        icon: "clock"
+
+  - id: "motor"
+    title: "Motorcycle"
+    subtitle: "Category A"
+    price: 15500
+    duration_days: 30
+    registration_fee: 1500
+    requirements:
+      - text: "Minimum 4th Grade"
+        icon: "graduation"
+      - text: "Medical Certificate Required"
+        icon: "medical"
+      - text: "30 Days Duration"
+        icon: "clock"
+
+  - id: "public1"
+    title: "Public-1 (Minibus)"
+    subtitle: "Category C1"
+    price: 32450
+    duration_days: 60
+    registration_fee: 1500
+    requirements:
+      - text: "Valid Auto License Req."
+        icon: "license"
+      - text: "Minimum 8th Grade"
+        icon: "graduation"
+      - text: "60 Days Duration"
+        icon: "clock"
+
+  - id: "drycargo1"
+    title: "Dry Cargo-1 (Truck)"
+    subtitle: "Category C"
+    price: 38000
+    duration_days: 60
+    registration_fee: 1500
+    requirements:
+      - text: "Valid Auto License Req."
+        icon: "license"
+      - text: "Minimum 8th Grade"
+        icon: "graduation"
+      - text: "60 Days Duration"
+        icon: "clock"

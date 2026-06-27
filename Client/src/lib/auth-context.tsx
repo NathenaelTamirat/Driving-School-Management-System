@@ -15,8 +15,11 @@ import {
   getMe,
   clearToken,
   getToken,
+  refreshToken as apiRefresh,
+  getJwtExpiresIn,
   type User,
 } from "@/lib/api";
+import { loadLicenseCategories } from "@/lib/enrollment-types";
 
 type AuthContextValue = {
   user: User | null;
@@ -69,9 +72,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         clearToken();
         setTokenState(null);
+        setIsLoading(false);
+        return;
       }
       setIsLoading(false);
     });
+  }, []);
+
+  // Auto-refresh the JWT before it expires.
+  useEffect(() => {
+    if (!token) return;
+
+    const expiresIn = getJwtExpiresIn(token);
+    // Refresh 5 minutes before expiry, or at 80% lifetime — whichever is sooner.
+    const refreshIn = Math.max(0, Math.min(expiresIn - 300, expiresIn * 0.8)) * 1000;
+
+    // If already expired or very close, refresh immediately.
+    if (refreshIn < 10_000) {
+      apiRefresh().then((r) => {
+        if (r.success && r.data) {
+          setTokenState(r.data.token);
+          setUser(r.data.user);
+        } else {
+          clearToken();
+          setTokenState(null);
+          setUser(null);
+        }
+      });
+    }
+
+    const timer = setTimeout(() => {
+      apiRefresh().then((r) => {
+        if (r.success && r.data) {
+          setTokenState(r.data.token);
+          setUser(r.data.user);
+        } else {
+          clearToken();
+          setTokenState(null);
+          setUser(null);
+        }
+      });
+    }, refreshIn);
+
+    return () => clearTimeout(timer);
+  }, [token]);
+
+  // Load license categories from backend once at startup.
+  // Falls back to hardcoded data if the API is unreachable.
+  useEffect(() => {
+    loadLicenseCategories();
   }, []);
 
   const value = useMemo(
