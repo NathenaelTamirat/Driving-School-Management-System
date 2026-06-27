@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, startTransition } from "react";
 import Link from "next/link";
 import {
   Plus,
@@ -15,26 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { getStudents, getBatches, type Student, type Batch } from "@/lib/api";
 import { cn } from "@/lib/utils";
-
-type DashboardStats = {
-  totalStudents: number;
-  totalBatches: number;
-  currentlyLearning: number;
-  graduated: number;
-  examReady: number;
-  theoryInProgress: number;
-  practicalInProgress: number;
-};
-
-const INITIAL_STATS: DashboardStats = {
-  totalStudents: 0,
-  totalBatches: 0,
-  currentlyLearning: 0,
-  graduated: 0,
-  examReady: 0,
-  theoryInProgress: 0,
-  practicalInProgress: 0,
-};
 
 const statCards = [
   { label: "Total Students", key: "totalStudents" as const, icon: Users, color: "bg-blue-500" },
@@ -88,10 +68,12 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    startTransition(() => {
+      fetchData();
+    });
   }, []);
 
-  const stats: DashboardStats = useMemo(() => ({
+  const stats = useMemo(() => ({
     totalStudents: students.length,
     totalBatches: batches.length,
     currentlyLearning: students.filter((s) => s.status !== "graduated" && s.status !== "exam_eligible").length,

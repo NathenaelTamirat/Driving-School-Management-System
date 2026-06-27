@@ -119,12 +119,6 @@ function mapCourseCategory(cc: CourseCategory): LicenseCategory | null {
   const mappedId = idMap[id];
   if (!mappedId) return null;
 
-  const iconMap: Record<string, LicenseCategory["icon"]> = {
-    car: "car",
-    motorcycle: "motorcycle",
-    bus: "bus",
-    truck: "truck",
-  };
   const icon = CATEGORY_ICON_MAP[id];
   if (!icon) return null;
 
