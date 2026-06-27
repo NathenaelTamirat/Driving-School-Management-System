@@ -55,6 +55,23 @@ Rails.application.routes.draw do
       # Finance Module - Payroll Entries (instructor salary view)
       resources :payroll_entries, only: [ :index, :show ]
 
+      # MASADEG / License Upgrade Module
+      resources :license_upgrades, only: [ :index, :show, :create ] do
+        member do
+          post :approve
+          post :reject
+        end
+      end
+
+      # Renewal Requests Module (external license renewal bypass)
+      resources :renewal_requests, only: [ :index, :show, :create ] do
+        member do
+          post :submit
+          post :complete
+          post :reject
+        end
+      end
+
       # Finance Module - Financial Reports
       namespace :financial_reports do
         get :summary
