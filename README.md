@@ -595,6 +595,21 @@ bin/kamal deploy               # Deploy the application
 bin/kamal app exec -i "bin/rails db:migrate"   # Run migrations
 ```
 
+### Database Backup Strategy
+
+PostgreSQL backups are managed by `backend/bin/post-deploy`, which runs automatically after every Kamal deploy. To enable:
+
+1. Set `BACKUP_S3_BUCKET=your-bucket-name` in the Kamal secrets.
+2. Uncomment the `aws s3 cp` line in `backend/bin/post-deploy`.
+3. Ensure the container has AWS CLI credentials configured.
+
+The backup flow:
+- After each deploy, `pg_dump` compresses the database to a timestamped `.sql.gz` file.
+- The file is uploaded to the configured S3-compatible bucket.
+- Old backups must be pruned via a bucket lifecycle policy (retain 30 days recommended).
+
+For environments without S3, the backup is written to `/tmp/` inside the container and must be retrieved manually.
+
 ### Future Scaling Options (from architecture docs)
 
 - Horizontal scaling: load balancer, PostgreSQL read replicas, Redis (replacing Solid Queue with Sidekiq)

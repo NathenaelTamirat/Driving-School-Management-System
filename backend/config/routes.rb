@@ -17,6 +17,7 @@ Rails.application.routes.draw do
       post   "auth/login",    to: "auth#login"
       post   "auth/register", to: "auth#register"
       delete "auth/logout",   to: "auth#logout"
+      post   "auth/refresh",  to: "auth#refresh"
       get    "auth/me",       to: "auth#me"
 
       # User management (admin-managed via UserPolicy)
@@ -24,7 +25,8 @@ Rails.application.routes.draw do
 
       resources :batches, only: [ :index, :show, :create ]
       resources :license_categories, only: [ :index ]
-      resources :students, only: [ :index, :show, :create ] do
+      resources :course_categories, only: [ :index ]
+      resources :students, only: [ :index, :show, :create, :update ] do
         # Student-specific invoices (Finance Module)
         get 'invoices', to: 'invoices#student_invoices'
         

@@ -10,6 +10,7 @@ module Api
       before_action :set_student
 
       def index
+        authorize AttendanceLog
         logs = @student.attendance_logs
         logs = logs.for_phase(params[:phase])             if params[:phase].present?
         logs = logs.on_date(Date.parse(params[:date]))    if params[:date].present?
@@ -21,6 +22,7 @@ module Api
       end
 
       def create
+        authorize AttendanceLog
         recorder = Lms::AttendanceRecorder.new(@student, attendance_log_params)
 
         if recorder.call

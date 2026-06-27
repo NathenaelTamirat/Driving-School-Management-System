@@ -8,7 +8,7 @@ RSpec.describe 'Api::V1::Students', type: :request do
     { "Authorization" => "Bearer #{token}" }
   end
 
-  let(:user) { create(:user) }
+  let(:clerk) { create(:user, :clerk) }
   let(:batch) { create(:batch) }
   let(:student) { create(:student, batch: batch) }
 
@@ -18,9 +18,15 @@ RSpec.describe 'Api::V1::Students', type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
-    it 'returns all students when authenticated' do
+    it 'forbids student role' do
+      student_user = create(:user)
+      get '/api/v1/students', headers: auth_headers(student_user)
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it 'returns all students when authenticated as clerk' do
       create_list(:student, 3, batch: batch)
-      get '/api/v1/students', headers: auth_headers(user)
+      get '/api/v1/students', headers: auth_headers(clerk)
       expect(response).to have_http_status(:ok)
       body = JSON.parse(response.body)
       expect(body['success']).to be true
@@ -31,7 +37,7 @@ RSpec.describe 'Api::V1::Students', type: :request do
 
     it 'paginates results' do
       create_list(:student, 5, batch: batch)
-      get '/api/v1/students', params: { page: 1, per_page: 2 }, headers: auth_headers(user)
+      get '/api/v1/students', params: { page: 1, per_page: 2 }, headers: auth_headers(clerk)
       expect(response).to have_http_status(:ok)
       body = JSON.parse(response.body)
       expect(body['data']['students'].size).to eq(2)
@@ -41,7 +47,7 @@ RSpec.describe 'Api::V1::Students', type: :request do
 
     it 'clamps per_page to maximum of 200' do
       create_list(:student, 3, batch: batch)
-      get '/api/v1/students', params: { per_page: 500 }, headers: auth_headers(user)
+      get '/api/v1/students', params: { per_page: 500 }, headers: auth_headers(clerk)
       expect(response).to have_http_status(:ok)
       body = JSON.parse(response.body)
       expect(body['data']['meta']['per_page']).to eq(200)
@@ -50,14 +56,59 @@ RSpec.describe 'Api::V1::Students', type: :request do
 
   describe 'GET /api/v1/students/:id' do
     it 'returns a specific student' do
-      get "/api/v1/students/#{student.id}", headers: auth_headers(user)
+      get "/api/v1/students/#{student.id}", headers: auth_headers(clerk)
       expect(response).to have_http_status(:ok)
       expect(JSON.parse(response.body)['data']['id']).to eq(student.id)
     end
 
     it 'returns 404 for non-existent student' do
-      get '/api/v1/students/99999', headers: auth_headers(user)
+      get '/api/v1/students/99999', headers: auth_headers(clerk)
       expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe 'PATCH /api/v1/students/:id' do
+    it 'updates a student' do
+      patch "/api/v1/students/#{student.id}",
+            params: { student: { first_name: 'Updated' } },
+            headers: auth_headers(clerk)
+      expect(response).to have_http_status(:ok)
+      expect(student.reload.first_name).to eq('Updated')
+    end
+
+    it 'returns the updated student data' do
+      patch "/api/v1/students/#{student.id}",
+            params: { student: { first_name: 'Updated', email: 'new@example.com' } },
+            headers: auth_headers(clerk)
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body['success']).to be true
+      expect(body['data']['first_name']).to eq('Updated')
+      expect(body['data']['email']).to eq('new@example.com')
+    end
+
+    it 'returns 404 for non-existent student' do
+      patch '/api/v1/students/99999',
+            params: { student: { first_name: 'Updated' } },
+            headers: auth_headers(clerk)
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'forbids instructor role from updating' do
+      instructor = create(:user, :instructor)
+      patch "/api/v1/students/#{student.id}",
+            params: { student: { first_name: 'Updated' } },
+            headers: auth_headers(instructor)
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it 'returns errors for invalid params' do
+      patch "/api/v1/students/#{student.id}",
+            params: { student: { first_name: '' } },
+            headers: auth_headers(clerk)
+      expect(response).to have_http_status(:unprocessable_entity)
+      body = JSON.parse(response.body)
+      expect(body['success']).to be false
     end
   end
 
@@ -80,7 +131,7 @@ RSpec.describe 'Api::V1::Students', type: :request do
         }
       }
       expect {
-        post '/api/v1/students', params: student_params, headers: auth_headers(user)
+        post '/api/v1/students', params: student_params, headers: auth_headers(clerk)
       }.to change(Student, :count).by(1)
       expect(response).to have_http_status(:created)
     end
@@ -92,7 +143,7 @@ RSpec.describe 'Api::V1::Students', type: :request do
           first_name: 'John'
         }
       }
-      post '/api/v1/students', params: student_params, headers: auth_headers(user)
+      post '/api/v1/students', params: student_params, headers: auth_headers(clerk)
       expect(response).to have_http_status(:unprocessable_entity)
     end
   end

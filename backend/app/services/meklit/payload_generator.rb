@@ -106,7 +106,10 @@ module Meklit
     # Adjust based on actual storage implementation (ActiveStorage, S3, etc.)
     def document_url(student, doc_type)
       if student.respond_to?(doc_type) && student.send(doc_type).attached?
-        Rails.application.routes.url_helpers.rails_blob_url(student.send(doc_type), only_path: true)
+        Rails.application.routes.url_helpers.rails_blob_url(
+          student.send(doc_type),
+          host: ENV.fetch("APP_HOST", "localhost:3001")
+        )
       elsif student.respond_to?("#{doc_type}_path")
         student.send("#{doc_type}_path")
       else

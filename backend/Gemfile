@@ -44,6 +44,13 @@ gem "httparty"
 # State machine for the Student lifecycle (used in app/models/student.rb)
 gem "aasm"
 
+# Centralised error tracking
+gem "sentry-ruby"
+gem "sentry-rails"
+
+# Rate limiting for login/register endpoints
+gem "rack-attack"
+
 # Authentication & authorization
 gem "devise"
 gem "devise-jwt"

@@ -41,11 +41,38 @@ type ApiResponse<T = unknown> = {
   errors?: string[] | Record<string, string[]>;
 };
 
-import type { EnrollmentState } from "@/lib/enrollment-types";
+import type { EnrollmentState, EnrollmentFormData } from "@/lib/enrollment-types";
 import { UPLOAD_SLOTS } from "@/lib/validations";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 const DEFAULT_BATCH_ID = Number(process.env.NEXT_PUBLIC_DEFAULT_BATCH_ID || "1");
+
+/** Generic fetch wrapper that auto-attaches the JWT and normalises the response. */
+export async function apiFetch<T = unknown>(
+  path: string,
+  options?: RequestInit,
+): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers: { ...authHeaders(options?.headers as Record<string, string>), ...options?.headers },
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      return {
+        success: false,
+        error: json.error || "Request failed",
+        errors: json.errors,
+      };
+    }
+    return { success: true, data: json as T };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Network error",
+    };
+  }
+}
 
 // Generic POST /api/v1/students.
 // Accepts both plain objects (JSON-encoded) and FormData (file uploads).
@@ -156,13 +183,64 @@ export async function createStudentFromEnrollment(
   return createStudent(payload);
 }
 
-// GET /api/v1/students — paginated student list with optional search/filter.
-export async function getStudents(params?: {
-  page?: number;
-  per_page?: number;
-  search?: string;
-  status?: string;
-}): Promise<ApiResponse<{ students: Student[]; meta: { page: number; per_page: number; total: number } }>> {
+// ---------------------------------------------------------------------------
+// New simplified EnrollmentFormData pipeline
+// ---------------------------------------------------------------------------
+
+// Maps the simplified EnrollmentFormData into the flat payload the backend
+// expects.  Extra fields (email, phone, license_category, payment_method)
+// are included so the backend can permit them later.
+export function mapEnrollmentFormDataToPayload(data: EnrollmentFormData) {
+  return {
+    batch_id: DEFAULT_BATCH_ID,
+    student_id: generateId("STU", data.phone),
+    document_id: generateId("DOC", data.phone),
+    first_name: data.firstName.trim(),
+    last_name: data.lastName.trim(),
+    date_of_birth: data.dateOfBirth,
+    address: data.address.trim(),
+    // Extra fields — the backend may permit these in future
+    email: data.email.trim(),
+    phone: data.phone.trim(),
+    license_category: data.licenseCategory,
+    payment_method: data.paymentMethod,
+    payment_notes: data.paymentNotes?.trim() ?? "",
+  };
+}
+
+// Builds a multipart/form-data request from the simplified form data.
+// String fields are appended as `student[key]=value` and files are
+// appended as `student[profile_photo]`, `student[yellow_card]`, etc.
+// so the Rails backend can pick them up via params[:student][...].
+export function buildFormDataFromEnrollmentFormData(
+  data: EnrollmentFormData,
+): FormData {
+  const formData = new FormData();
+  const payload = mapEnrollmentFormDataToPayload(data);
+
+  Object.entries(payload).forEach(([key, value]) => {
+    formData.append(`student[${key}]`, String(value));
+  });
+
+  // Attach each uploaded file to its respective slot
+  // (backend expects keys like profile_photo, yellow_card, etc.)
+  data.documents.forEach((file, index) => {
+    formData.append(`student[document_${index}]`, file);
+  });
+
+  return formData;
+}
+
+// POST the simplified EnrollmentFormData to /api/v1/students.
+export async function submitEnrollmentFormData(
+  data: EnrollmentFormData,
+): Promise<ApiResponse> {
+  const formData = buildFormDataFromEnrollmentFormData(data);
+  return createStudent(formData);
+}
+
+// GET /api/v1/students — returns the full student list.
+export async function getStudents(): Promise<ApiResponse<Student[]>> {
   try {
     const query = new URLSearchParams();
     if (params?.page) query.set("page", String(params.page));
@@ -204,6 +282,18 @@ export async function getBatches(): Promise<ApiResponse<Batch[]>> {
   }
 }
 
+// GET /api/v1/course_categories — returns enrollment course categories/pricing.
+export async function getCourseCategories(): Promise<ApiResponse<CourseCategory[]>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/course_categories`, { headers: authHeaders() });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Failed to fetch course categories" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
 // PATCH /api/v1/students/:id — updates a student's fields.
 export async function updateStudent(
   id: number,
@@ -223,77 +313,105 @@ export async function updateStudent(
   }
 }
 
-// GET /api/v1/students/:id/invoices — returns a student's invoices.
-export async function getStudentInvoices(id: number): Promise<ApiResponse<StudentInvoice[]>> {
+// POST /api/v1/auth/login
+export async function login(email: string, password: string): Promise<ApiResponse<{ user: User; token: string }>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}/invoices`, { headers: authHeaders() });
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auth: { email, password } }),
+    });
     const json = await response.json();
-    if (!response.ok) return { success: false, error: json.error || "Failed to fetch invoices" };
-    return { success: true, data: json.data ?? json };
+    if (!response.ok) {
+      return { success: false, error: json.error?.message || json.error || "Invalid email or password" };
+    }
+    const token = json.data?.token;
+    if (token) setToken(token);
+    return { success: true, data: json.data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Network error" };
   }
 }
 
-// GET /api/v1/students/:id/attendance_logs — returns a student's attendance logs.
-export async function getStudentAttendance(id: number): Promise<ApiResponse<AttendanceLog[]>> {
+// DELETE /api/v1/auth/logout
+export async function logout(): Promise<ApiResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}/attendance_logs`, { headers: authHeaders() });
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    clearToken();
     const json = await response.json();
-    if (!response.ok) return { success: false, error: json.error || "Failed to fetch attendance" };
-    return { success: true, data: json.data ?? json };
+    return { success: true, data: json };
+  } catch {
+    clearToken();
+    return { success: true };
+  }
+}
+
+// POST /api/v1/auth/refresh — issues a new token with a fresh 1-hour expiry.
+// Call this before the current token expires to keep the session alive.
+export async function refreshToken(): Promise<ApiResponse<{ user: User; token: string }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      clearToken();
+      return { success: false, error: json.error || "Token refresh failed" };
+    }
+    if (json.data?.token) setToken(json.data.token);
+    return { success: true, data: json.data };
+  } catch (err) {
+    clearToken();
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// Decodes the payload of a JWT without verifying the signature.
+// Returns null if the token is malformed.
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    return JSON.parse(atob(parts[1]));
+  } catch {
+    return null;
+  }
+}
+
+/** Returns the number of seconds until the JWT expires, or 0 if unreadable. */
+export function getJwtExpiresIn(token: string): number {
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") return 0;
+  return Math.max(0, payload.exp - Math.floor(Date.now() / 1000));
+}
+
+// GET /api/v1/auth/me
+export async function getMe(): Promise<ApiResponse<{ user: User }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/me`, { headers: authHeaders() });
+    const json = await response.json();
+    if (!response.ok) {
+      clearToken();
+      return { success: false, error: json.error || "Session expired" };
+    }
+    return { success: true, data: json.data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Network error" };
   }
 }
 
-// GET /api/v1/students/:id/lms_progress — returns a student's LMS progress.
-export async function getStudentLmsProgress(id: number): Promise<ApiResponse<LmsProgress>> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}/lms_progress`, { headers: authHeaders() });
-    const json = await response.json();
-    if (!response.ok) return { success: false, error: json.error || "Failed to fetch LMS progress" };
-    return { success: true, data: json.data ?? json };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Network error" };
-  }
-}
-
-export type StudentInvoice = {
+export type User = {
   id: number;
-  invoice_number: string;
-  student_id: number;
-  student_name: string | null;
-  invoice_type: string;
-  amount: number;
-  status: string;
-  due_date: string;
-  paid_at: string | null;
-  payment_method: string | null;
-  payment_reference: string | null;
-  description: string | null;
-  is_overdue: boolean;
+  email: string;
+  full_name: string;
+  role: "admin" | "instructor" | "clerk" | "student";
+  phone_number: string | null;
+  is_qualified_instructor: boolean;
   created_at: string;
-  updated_at: string;
-};
-
-export type AttendanceLog = {
-  id: number;
-  student_id: number;
-  phase: string;
-  attendance_date: string;
-  present: boolean;
-  instructor_name: string | null;
-  created_at: string;
-};
-
-export type LmsProgress = {
-  theory_completed: boolean;
-  theory_percentage: number;
-  practical_completed: boolean;
-  practical_percentage: number;
-  mock_test_status: string;
-  next_milestone: string;
 };
 
 // Type shape returned by the backend Student index/show endpoints.
@@ -317,6 +435,7 @@ export type Student = {
   status: string;
   verified: boolean;
   verified_at: string | null;
+  license_category: string | null;
   theory_days_completed: number;
   practical_days_completed: number;
   mock_test_score: number;
@@ -333,4 +452,16 @@ export type Batch = {
   id: number;
   name: string;
   status: string;
+};
+
+// Type shape returned by GET /api/v1/course_categories.
+// Mirrors the structure in backend/config/course_categories.yml.
+export type CourseCategory = {
+  id: string;
+  title: string;
+  subtitle: string;
+  price: number;
+  duration_days: number;
+  registration_fee: number;
+  requirements: { text: string; icon: string }[];
 };
