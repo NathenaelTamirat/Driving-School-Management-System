@@ -40,6 +40,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_140002) do
     t.index ["scheduled_date"], name: "index_exam_bookings_on_scheduled_date"
     t.index ["status"], name: "index_exam_bookings_on_status"
     t.index ["student_id"], name: "index_exam_bookings_on_student_id"
+    t.index ["student_id", "exam_type", "status"], name: "index_exam_bookings_on_student_exam_type_status"
   end
 
   create_table "jwt_denylist", force: :cascade do |t|
