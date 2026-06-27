@@ -7,6 +7,7 @@ module Api
     # completion percentages, mock test status, and the next milestone step.
     class LmsProgressController < BaseController
       def show
+        authorize :lms_progress
         student = Student.find(params[:student_id])
         progress = Lms::ProgressCalculator.new(student).call
         render_success(progress)

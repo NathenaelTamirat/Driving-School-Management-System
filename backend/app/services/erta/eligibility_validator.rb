@@ -52,11 +52,13 @@ module ERTA
       end
     end
 
-    # Validate required documents are present
-    # TODO: Implement document validation once ActiveStorage is set up
+    # Validate required documents are present via ActiveStorage.
     def validate_documents
-      # Placeholder for document validation
-      # Required documents: profile_photo, yellow_card, grade_8, grade_10, grade_12
+      %w[profile_photo yellow_card grade_8 grade_10 grade_12].each do |doc_type|
+        unless student.respond_to?(doc_type) && student.send(doc_type).attached?
+          errors << "Missing required document: #{doc_type.humanize}"
+        end
+      end
     end
   end
 end

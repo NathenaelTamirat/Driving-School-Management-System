@@ -8,7 +8,8 @@ module Api
     class LicenseCategoriesController < BaseController
       # GET /api/v1/license_categories
       def index
-        render json: categories_config["categories"]
+        authorize :license_category
+        render_success(categories_config["categories"])
       end
 
       private

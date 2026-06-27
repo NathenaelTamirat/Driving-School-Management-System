@@ -21,6 +21,13 @@ production:
     schedule: "0 23 * * *"  # Runs at 11:00 PM every day
     queue: default
 
+  # JWT Denylist Cleanup - Daily at 4:00 AM
+  # Purges expired tokens from jwt_denylist so the table doesn't grow unbounded.
+  jwt_cleanup:
+    class: JwtCleanupJob
+    schedule: "0 4 * * *"
+    queue: default
+
 # Development schedule - for testing recurring jobs locally
 development:
   # Attendance Breach Scanner - Every hour for testing
@@ -39,6 +46,12 @@ development:
   payment_reconciliation:
     class: PaymentReconciliationJob
     schedule: "0 */6 * * *"  # Every 6 hours
+    queue: default
+
+  # JWT Denylist Cleanup - Every 6 hours for testing
+  jwt_cleanup:
+    class: JwtCleanupJob
+    schedule: "0 */6 * * *"
     queue: default
 
 # Test environment - no recurring jobs

@@ -20,7 +20,7 @@ RSpec.describe "Api::V1::GraduationRecords", type: :request do
     end
   end
 
-  let(:instructor) { create(:user, :instructor) }
+  let(:clerk) { create(:user, :clerk) }
   let(:student)    { create(:student, status: "exam_eligible") }
 
   describe "POST /api/v1/students/:student_id/graduation_record" do
@@ -29,7 +29,7 @@ RSpec.describe "Api::V1::GraduationRecords", type: :request do
       allow(DossierTransferJob).to receive(:perform_later)
 
       post "/api/v1/students/#{student.id}/graduation_record",
-           headers: auth_headers(instructor), as: :json
+           headers: auth_headers(clerk), as: :json
 
       expect(response).to have_http_status(:created)
       expect(student.reload.status).to eq("graduated")
@@ -37,10 +37,18 @@ RSpec.describe "Api::V1::GraduationRecords", type: :request do
 
     it "returns 422 when the student has not passed a practical exam" do
       post "/api/v1/students/#{student.id}/graduation_record",
-           headers: auth_headers(instructor), as: :json
+           headers: auth_headers(clerk), as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(json["error"]["details"]).to include("No passed practical exam found")
+    end
+
+    it "forbids instructor role" do
+      instructor = create(:user, :instructor)
+      add_passed_practical(student)
+      post "/api/v1/students/#{student.id}/graduation_record",
+           headers: auth_headers(instructor), as: :json
+      expect(response).to have_http_status(:forbidden)
     end
 
     it "requires authentication" do
@@ -51,7 +59,7 @@ RSpec.describe "Api::V1::GraduationRecords", type: :request do
 
   describe "GET /api/v1/students/:student_id/graduation_record" do
     it "returns 404 when no record exists" do
-      get "/api/v1/students/#{student.id}/graduation_record", headers: auth_headers(instructor)
+      get "/api/v1/students/#{student.id}/graduation_record", headers: auth_headers(clerk)
       expect(response).to have_http_status(:not_found)
     end
   end

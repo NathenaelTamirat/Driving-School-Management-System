@@ -9,9 +9,18 @@ class Student < ApplicationRecord
   has_many :license_upgrades, dependent: :destroy
   has_one  :graduation_record, dependent: :destroy
 
+  has_one_attached :profile_photo
+  has_one_attached :yellow_card
+  has_one_attached :grade_8
+  has_one_attached :grade_10
+  has_one_attached :grade_12
+  has_one_attached :medical
+
   validates :status, presence: true
   validates :student_id, presence: true, uniqueness: true
   validates :document_id, presence: true, uniqueness: true
+  validates :identification_document, inclusion: { in: %w[National_ID Kebele_ID Passport Birth_Certificate] }, allow_blank: true
+  validates :education_level, inclusion: { in: %w[Grade_4_Certificate Grade_10_Certificate] }, allow_blank: true
   validates :first_name, presence: true, length: { maximum: 50 }
   validates :middle_name, presence: true, length: { maximum: 50 }
   validates :last_name, presence: true, length: { maximum: 50 }

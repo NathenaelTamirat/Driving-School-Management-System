@@ -11,10 +11,12 @@ module Api
       before_action :set_student
 
       def index
+        authorize MockTest
         render_success(@student.mock_tests.order(test_date: :desc))
       end
 
       def create
+        authorize MockTest
         mock_test = @student.mock_tests.build(mock_test_params)
 
         if mock_test.save

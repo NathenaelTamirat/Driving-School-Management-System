@@ -8,7 +8,7 @@ RSpec.describe 'Api::V1::LmsProgress', type: :request do
     { "Authorization" => "Bearer #{token}" }
   end
 
-  let(:user) { create(:user) }
+  let(:instructor) { create(:user, :instructor) }
   let(:batch) { create(:batch) }
   let(:student) { create(:student, batch: batch) }
 
@@ -18,8 +18,14 @@ RSpec.describe 'Api::V1::LmsProgress', type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
+    it 'forbids student role' do
+      student_user = create(:user)
+      get "/api/v1/students/#{student.id}/lms_progress", headers: auth_headers(student_user)
+      expect(response).to have_http_status(:forbidden)
+    end
+
     it 'returns progress for a student' do
-      get "/api/v1/students/#{student.id}/lms_progress", headers: auth_headers(user)
+      get "/api/v1/students/#{student.id}/lms_progress", headers: auth_headers(instructor)
       expect(response).to have_http_status(:ok)
       body = JSON.parse(response.body)
       expect(body['success']).to be true
@@ -28,7 +34,7 @@ RSpec.describe 'Api::V1::LmsProgress', type: :request do
     end
 
     it 'returns 404 for non-existent student' do
-      get '/api/v1/students/99999/lms_progress', headers: auth_headers(user)
+      get '/api/v1/students/99999/lms_progress', headers: auth_headers(instructor)
       expect(response).to have_http_status(:not_found)
     end
   end

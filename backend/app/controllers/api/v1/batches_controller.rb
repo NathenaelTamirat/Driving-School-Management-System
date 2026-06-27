@@ -13,6 +13,7 @@ module Api
 
       # GET /api/v1/batches
       def index
+        authorize Batch
         page     = params.fetch(:page, 1).to_i
         per_page = params.fetch(:per_page, 50).to_i.clamp(1, 200)
         @batches = Batch.order(:created_at).page(page).per(per_page)
@@ -24,11 +25,13 @@ module Api
 
       # GET /api/v1/batches/:id
       def show
+        authorize @batch
         render_success(@batch)
       end
 
       # POST /api/v1/batches
       def create
+        authorize Batch
         @batch = Batch.new(batch_params)
 
         if @batch.save

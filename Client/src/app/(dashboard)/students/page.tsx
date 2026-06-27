@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, startTransition } from "react";
 import Link from "next/link";
 import { Plus, Search, Users, Layers, BookOpen, GraduationCap, ChevronLeft, ChevronRight, Eye, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,15 @@ const statusLabels: Record<string, string> = {
   graduated: "Graduated",
 };
 
+const LICENSE_CATEGORY_LABELS: Record<string, string> = {
+  auto: "Auto (B)",
+  motor: "Motorcycle (A)",
+  public1: "Public-1 (C1)",
+  drycargo1: "Dry Cargo-1 (C)",
+};
+
+type SortKey = "student_id" | "full_name" | "status";
+
 export default function StudentsPage() {
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -62,16 +71,7 @@ export default function StudentsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => {
-    Promise.all([getStudents({ page: 1, per_page: 10000 }), getBatches()]).then(([sRes, bRes]) => {
-      if (sRes.success && sRes.data) {
-        const items = Array.isArray(sRes.data) ? sRes.data : (sRes.data as { students?: Student[] }).students ?? [];
-        setAllStudents(items);
-      }
-      if (bRes.success && bRes.data) setBatches(bRes.data);
-      setLoading(false);
-    });
-  }, []);
+  useEffect(() => { startTransition(() => { fetchData(); }); }, []);
 
   const handleStatusFilter = (value: string) => {
     setStatusFilter(value);
@@ -235,48 +235,82 @@ export default function StudentsPage() {
       </div>
 
       {/* Table */}
-      <DataTable
-        columns={columns}
-        data={paginated}
-        loading={loading}
-        emptyMessage={
-          debouncedSearch || statusFilter
-            ? "No students match your filters."
-            : "No students found."
-        }
-      />
-
-      {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </Button>
-          {pageNumbers.map((p) => (
-            <Button
-              key={p}
-              variant={p === page ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPage(p)}
-            >
-              {p}
-            </Button>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+      <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-4 py-3">
+                  <button onClick={() => toggleSort("student_id")} className="flex items-center gap-1 hover:text-[#0f172a]">
+                    Student ID <ArrowUpDown className="h-3 w-3" />
+                  </button>
+                </th>
+                <th className="px-4 py-3">
+                  <button onClick={() => toggleSort("full_name")} className="flex items-center gap-1 hover:text-[#0f172a]">
+                    Full Name <ArrowUpDown className="h-3 w-3" />
+                  </button>
+                </th>
+                <th className="px-4 py-3">
+                  <button onClick={() => toggleSort("status")} className="flex items-center gap-1 hover:text-[#0f172a]">
+                    Status <ArrowUpDown className="h-3 w-3" />
+                  </button>
+                </th>
+                <th className="px-4 py-3">Verification</th>
+                <th className="px-4 py-3">License Category</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-b last:border-0">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3">
+                        <span className="inline-block h-4 w-full animate-pulse rounded bg-slate-200" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
+                    {search || statusFilter || verifiedFilter
+                      ? "No students match your filters."
+                      : "No students found."}
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((s) => (
+                  <tr
+                    key={s.id}
+                    onClick={() => setSelectedStudent(s)}
+                    className="cursor-pointer border-b last:border-0 transition-colors hover:bg-slate-50"
+                  >
+                    <td className="px-4 py-3 font-mono text-xs text-slate-600">{s.student_id}</td>
+                    <td className="px-4 py-3 font-medium text-[#0f172a]">
+                      {s.first_name} {s.middle_name} {s.last_name}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={statusBadge[s.status] ?? "secondary"}>
+                        {statusLabels[s.status] ?? s.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      {s.verified ? (
+                        <Badge variant="success">Verified</Badge>
+                      ) : (
+                        <Badge variant="warning">Unverified</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {s.license_category
+                        ? LICENSE_CATEGORY_LABELS[s.license_category] ?? s.license_category
+                        : "\u2014"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
