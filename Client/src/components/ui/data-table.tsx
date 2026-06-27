@@ -14,6 +14,7 @@ export type DataTableProps<T> = {
   data: T[];
   loading?: boolean;
   emptyMessage?: string;
+  onRowClick?: (row: T) => void;
 };
 
 export function DataTable<T extends Record<string, unknown>>({
@@ -21,6 +22,7 @@ export function DataTable<T extends Record<string, unknown>>({
   data,
   loading,
   emptyMessage = "No results found.",
+  onRowClick,
 }: DataTableProps<T>) {
   return (
     <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
@@ -54,7 +56,14 @@ export function DataTable<T extends Record<string, unknown>>({
               </tr>
             ) : (
               data.map((row, i) => (
-                <tr key={i} className="border-b last:border-0 transition-colors hover:bg-slate-50">
+                <tr
+                  key={i}
+                  className={cn(
+                    "border-b last:border-0 transition-colors hover:bg-slate-50",
+                    onRowClick && "cursor-pointer",
+                  )}
+                  onClick={() => onRowClick?.(row)}
+                >
                   {columns.map((col) => (
                     <td key={col.header} className={cn("px-4 py-3", col.className)}>
                       {col.cell
