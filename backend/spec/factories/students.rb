@@ -6,6 +6,7 @@ FactoryBot.define do
     document_id { "DOC#{Faker::Number.unique.number(digits: 6)}" }
     identification_document { %w[National_ID Kebele_ID Passport Birth_Certificate].sample }
     eye_acuity_test { [ "Normal", "Mild_Impairment", "Moderate_Impairment", "Severe_Impairment" ].sample }
+    meklit_approval_date { nil }
     first_name { Faker::Name.first_name }
     middle_name { Faker::Name.middle_name }
     last_name { Faker::Name.last_name }

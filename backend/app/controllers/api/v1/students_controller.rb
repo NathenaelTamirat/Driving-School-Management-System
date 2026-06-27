@@ -67,6 +67,7 @@ module Api
           :document_id,
           :identification_document,
           :eye_acuity_test,
+          :meklit_approval_date,
           :first_name,
           :middle_name,
           :last_name,
