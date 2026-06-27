@@ -2,154 +2,145 @@
 
 import {
   createContext,
+  useContext,
   useState,
-  useCallback,
   useEffect,
-  type ReactNode,
+  useCallback,
 } from "react";
-import { getToken, setToken, clearToken } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import type { User } from "@/lib/auth";
+import {
+  getToken,
+  setToken as storeToken,
+  removeToken,
+  getCurrentUser,
+} from "@/lib/auth";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-const USER_STORAGE_KEY = "driving_school_user";
+const TOKEN_KEY = "driving_school_token";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-export type Role = "admin" | "clerk" | "instructor";
-
-export type User = {
-  id: number;
-  email: string;
-  full_name: string;
-  role: Role;
-  phone_number: string | null;
-  is_qualified_instructor: boolean;
-};
-
-type LoginResult = { success: true } | { success: false; error: string };
-
-type AuthContextType = {
+interface AuthContextType {
   user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<LoginResult>;
+  token: string | null;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  isLoading: boolean;
   isAuthenticated: boolean;
-};
-
-export const AuthContext = createContext<AuthContextType | null>(null);
-
-function loadStoredUser(): User | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(USER_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
-  } catch {
-    return null;
-  }
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const token = getToken();
-    return token ? loadStoredUser() : null;
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function setCookie(name: string, value: string, days = 7) {
+  if (typeof document === "undefined") return;
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+function clearCookie(name: string) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(TOKEN_KEY);
   });
-  const [loading, setLoading] = useState(() => !!getToken());
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem(TOKEN_KEY);
+  });
 
   useEffect(() => {
-    const token = getToken();
     if (!token) return;
 
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-        const json = await res.json();
-        if (!cancelled) {
-          if (json.success && json.data?.user) {
-            setUser(json.data.user);
-          } else {
-            clearToken();
-            localStorage.removeItem(USER_STORAGE_KEY);
-            setUser(null);
-          }
+    getCurrentUser()
+      .then((fetchedUser) => {
+        if (fetchedUser) {
+          setUser(fetchedUser);
+          setCookie("token", token);
+          setCookie("role", fetchedUser.role);
+        } else {
+          removeToken();
+          setToken(null);
         }
-      } catch {
-        if (!cancelled) {
-          clearToken();
-          localStorage.removeItem(USER_STORAGE_KEY);
-          setUser(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      })
+      .finally(() => setIsLoading(false));
+  }, [token]);
 
   const login = useCallback(
-    async (email: string, password: string): Promise<LoginResult> => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ auth: { email, password } }),
-        });
-        const json = await res.json();
-        if (!res.ok || !json.success) {
-          return {
-            success: false,
-            error: json.error?.message || json.error || "Login failed",
-          };
-        }
-        setToken(json.data.token);
-        localStorage.setItem(
-          USER_STORAGE_KEY,
-          JSON.stringify(json.data.user),
-        );
-        setUser(json.data.user);
-        return { success: true };
-      } catch (err) {
-        return {
-          success: false,
-          error:
-            err instanceof Error
-              ? err.message
-              : "Network error. Please check your connection.",
-        };
+    async (email: string, password: string) => {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const json = await response.json().catch(() => ({}));
+        throw new Error(json.error || "Invalid email or password");
       }
+
+      const json = await response.json();
+      const authToken: string = json.token || json.access_token;
+      const authUser: User = json.user;
+
+      storeToken(authToken);
+      setToken(authToken);
+      setUser(authUser);
+
+      setCookie("token", authToken);
+      setCookie("role", authUser.role);
+
+      router.push("/");
     },
-    [],
+    [router],
   );
 
   const logout = useCallback(async () => {
-    const token = getToken();
-    if (token) {
-      try {
+    try {
+      const currentToken = getToken();
+      if (currentToken) {
         await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+          method: "POST",
+          headers: { Authorization: `Bearer ${currentToken}` },
         });
-      } catch {
-        // swallow
       }
+    } catch {
+    } finally {
+      removeToken();
+      setToken(null);
+      setUser(null);
+
+      clearCookie("token");
+      clearCookie("role");
+
+      router.push("/login");
     }
-    clearToken();
-    localStorage.removeItem(USER_STORAGE_KEY);
-    setUser(null);
-  }, []);
+  }, [router]);
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, logout, isAuthenticated: !!user }}
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        isLoading,
+        isAuthenticated: !!user && !!token,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }

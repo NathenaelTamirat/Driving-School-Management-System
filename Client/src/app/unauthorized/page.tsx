@@ -1,21 +1,33 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ShieldX } from "lucide-react";
 
 export default function UnauthorizedPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center space-y-4">
-        <h1 className="text-6xl font-bold text-muted-foreground">403</h1>
-        <h2 className="text-2xl font-semibold text-foreground">
-          Unauthorized Access
-        </h2>
-        <p className="text-muted-foreground">
-          You do not have permission to access this page.
-        </p>
-        <Button asChild>
-          <Link href="/">Go to Dashboard</Link>
-        </Button>
-      </div>
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <Card className="w-full max-w-sm text-center">
+        <CardHeader>
+          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+            <ShieldX className="h-8 w-8 text-destructive" />
+          </div>
+          <CardTitle className="text-xl">Access Denied</CardTitle>
+          <CardDescription>
+            You don&apos;t have permission to view this page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild className="w-full">
+            <Link href="/">Back to Dashboard</Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
