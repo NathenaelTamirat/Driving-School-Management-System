@@ -1,14 +1,29 @@
-// Root layout wrapper for the authenticated dashboard area.
-// Composes Sidebar (left nav) + Header (top bar) + scrollable <main> content
-// into a full-height flex layout. The outer container uses h-screen overflow-hidden
-// so only the main area scrolls (sidebar and header stay fixed).
-// Used in src/app/(dashboard)/layout.tsx as the layout component for all
-// routes under the (dashboard) route group.
+"use client";
 
+import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) router.replace("/login");
+  }, [loading, user, router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center text-slate-500">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       <Sidebar />

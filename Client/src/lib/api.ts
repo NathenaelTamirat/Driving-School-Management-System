@@ -69,7 +69,7 @@ export async function createStudent(
     if (!response.ok) {
       return {
         success: false,
-        error: json.error || "Failed to create student",
+        error: json.error?.message || json.error || "Failed to create student",
         errors: json.errors,
       };
     }
@@ -161,8 +161,8 @@ export async function getStudents(): Promise<ApiResponse<Student[]>> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/students`, { headers: authHeaders() });
     const json = await response.json();
-    if (!response.ok) return { success: false, error: json.error || "Failed to fetch students" };
-    return { success: true, data: json };
+    if (!response.ok) return { success: false, error: json.error?.message || json.error || "Failed to fetch students" };
+    return { success: true, data: json.data?.students ?? json.data ?? json };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Network error" };
   }
@@ -173,8 +173,8 @@ export async function getStudent(id: number): Promise<ApiResponse<Student>> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}`, { headers: authHeaders() });
     const json = await response.json();
-    if (!response.ok) return { success: false, error: json.error || "Student not found" };
-    return { success: true, data: json };
+    if (!response.ok) return { success: false, error: json.error?.message || json.error || "Student not found" };
+    return { success: true, data: json.data ?? json };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Network error" };
   }
@@ -185,8 +185,86 @@ export async function getBatches(): Promise<ApiResponse<Batch[]>> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/batches`, { headers: authHeaders() });
     const json = await response.json();
-    if (!response.ok) return { success: false, error: json.error || "Failed to fetch batches" };
-    return { success: true, data: json };
+    if (!response.ok) return { success: false, error: json.error?.message || json.error || "Failed to fetch batches" };
+    return { success: true, data: json.data?.batches ?? json.data ?? json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// ─── Auth API ────────────────────────────────────────────────────────────────
+
+export type User = {
+  id: number;
+  email: string;
+  full_name: string;
+  role: string;
+  phone_number: string | null;
+  is_qualified_instructor: boolean;
+  created_at: string;
+};
+
+export async function login(
+  email: string,
+  password: string,
+): Promise<ApiResponse<{ user: User; token: string }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auth: { email, password } }),
+    });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error?.message || json.error || "Login failed" };
+    return { success: true, data: json.data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+export async function register(
+  data: {
+    email: string;
+    password: string;
+    password_confirmation: string;
+    full_name: string;
+    phone_number?: string;
+  },
+): Promise<ApiResponse<{ user: User; token: string }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auth: data }),
+    });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error?.message || json.error || "Registration failed", errors: json.errors };
+    return { success: true, data: json.data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+export async function logout(): Promise<ApiResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error?.message || json.error || "Logout failed" };
+    return { success: true, data: json.data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+export async function getMe(): Promise<ApiResponse<{ user: User }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/me`, { headers: authHeaders() });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error?.message || json.error || "Not authenticated" };
+    return { success: true, data: json.data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Network error" };
   }
@@ -204,7 +282,7 @@ export async function updateStudent(
       body: JSON.stringify({ student: data }),
     });
     const json = await response.json();
-    if (!response.ok) return { success: false, error: json.error || "Failed to update student", errors: json.errors };
+    if (!response.ok) return { success: false, error: json.error?.message || json.error || "Failed to update student", errors: json.errors };
     return { success: true, data: json };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Network error" };

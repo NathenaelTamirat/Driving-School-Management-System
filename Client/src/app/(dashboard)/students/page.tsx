@@ -15,7 +15,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Search, Users, Layers, BookOpen, GraduationCap, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Users, Layers, BookOpen, GraduationCap, ArrowUpDown, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -61,6 +61,7 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [verifiedFilter, setVerifiedFilter] = useState("");
@@ -70,13 +71,15 @@ export default function StudentsPage() {
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     const [sRes, bRes] = await Promise.all([getStudents(), getBatches()]);
     if (sRes.success && sRes.data) setStudents(sRes.data);
+    else if (sRes.error) setError(sRes.error);
     if (bRes.success && bRes.data) setBatches(bRes.data);
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { Promise.resolve().then(fetchData); }, []);
 
   const stats = useMemo(() => ({
     total: students.length,
@@ -199,6 +202,21 @@ export default function StudentsPage() {
         </Select>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-1 rounded-md bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-200"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
         <div className="overflow-x-auto">
@@ -235,12 +253,18 @@ export default function StudentsPage() {
                     ))}
                   </tr>
                 ))
-              ) : filtered.length === 0 ? (
+              ) : filtered.length === 0 && !error ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
                     {search || statusFilter || verifiedFilter
                       ? "No students match your filters."
                       : "No students found."}
+                  </td>
+                </tr>
+              ) : filtered.length === 0 && error ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
+                    Failed to load data. Click Retry above.
                   </td>
                 </tr>
               ) : (

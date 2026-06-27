@@ -51,7 +51,6 @@ export function ProfileStep({ onContinue }: ProfileStepProps) {
 
   return (
     <ProfileStepForm
-      key={JSON.stringify(state.profile)}
       profile={state.profile}
       onContinue={onContinue}
       updateProfile={updateProfile}
@@ -79,7 +78,7 @@ function ProfileStepForm({
     formState: { errors },
   } = useForm<ProfileStepValues>({
     resolver: zodResolver(profileStepSchema),
-    defaultValues: profile,
+    values: profile,
   });
 
   const watchedBloodType = watch("bloodType");
