@@ -10,16 +10,16 @@ export default function StudentLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "student")) {
+    if (!isLoading && (!user || user.role !== "student")) {
       router.replace("/unauthorized");
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
-  if (loading || !user || user.role !== "student") return null;
+  if (isLoading || !user || user.role !== "student") return null;
 
   return <AppShell>{children}</AppShell>;
 }

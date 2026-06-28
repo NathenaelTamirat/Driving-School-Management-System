@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { user, loading, register } = useAuth();
+  const { user, isLoading, register } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -20,10 +20,10 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace("/");
-  }, [loading, user, router]);
+    if (!isLoading && user) router.replace("/");
+  }, [isLoading, user, router]);
 
-  if (loading) return null;
+  if (isLoading) return null;
   if (user) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {

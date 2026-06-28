@@ -10,16 +10,16 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "admin")) {
+    if (!isLoading && (!user || user.role !== "admin")) {
       router.replace("/unauthorized");
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
-  if (loading || !user || user.role !== "admin") return null;
+  if (isLoading || !user || user.role !== "admin") return null;
 
   return <AppShell>{children}</AppShell>;
 }

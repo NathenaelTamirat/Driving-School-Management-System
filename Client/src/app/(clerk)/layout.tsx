@@ -10,19 +10,19 @@ export default function ClerkLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (
-      !loading &&
+      !isLoading &&
       (!user || (user.role !== "admin" && user.role !== "clerk"))
     ) {
       router.replace("/unauthorized");
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
-  if (loading || !user || (user.role !== "admin" && user.role !== "clerk"))
+  if (isLoading || !user || (user.role !== "admin" && user.role !== "clerk"))
     return null;
 
   return <AppShell>{children}</AppShell>;
