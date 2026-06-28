@@ -391,22 +391,6 @@ export async function updateStudent(
   }
 }
 
-// DELETE /api/v1/auth/logout
-export async function logout(): Promise<ApiResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
-      method: "DELETE",
-      headers: authHeaders(),
-    });
-    clearToken();
-    const json = await response.json();
-    return { success: true, data: json };
-  } catch {
-    clearToken();
-    return { success: true };
-  }
-}
-
 // POST /api/v1/auth/refresh — issues a new token with a fresh 1-hour expiry.
 // Call this before the current token expires to keep the session alive.
 export async function refreshToken(): Promise<ApiResponse<{ user: User; token: string }>> {
@@ -478,21 +462,6 @@ export async function getUsers(): Promise<ApiResponse<User[]>> {
     const json = await response.json();
     if (!response.ok) return { success: false, error: json.error || "Failed to fetch users" };
     return { success: true, data: json };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Network error" };
-  }
-}
-
-// GET /api/v1/auth/me
-export async function getMe(): Promise<ApiResponse<{ user: User }>> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/me`, { headers: authHeaders() });
-    const json = await response.json();
-    if (!response.ok) {
-      clearToken();
-      return { success: false, error: json.error || "Session expired" };
-    }
-    return { success: true, data: json.data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Network error" };
   }
@@ -576,6 +545,12 @@ export type Invoice = {
   due_date: string | null;
   description: string | null;
   created_at: string;
+};
+
+export type StudentInvoice = Invoice & {
+  invoice_number: string;
+  student_name: string;
+  invoice_type: string;
 };
 
 // Type shape for the lightweight Batch model used in selector dropdowns.
@@ -824,6 +799,73 @@ export async function markInvoicePaid(id: number): Promise<ApiResponse> {
     const res = await fetch(`${API_BASE_URL}/api/v1/invoices/${id}/mark_paid`, {
       method: "POST",
       headers: authHeaders(),
+    });
+    const json = await res.json();
+    if (!res.ok) return { success: false, error: json.error || "Failed to mark invoice paid" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// GET /api/v1/invoices/:id
+export async function getInvoice(id: number): Promise<ApiResponse<StudentInvoice>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/invoices/${id}`, { headers: authHeaders() });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Failed to fetch invoice" };
+    return { success: true, data: json.data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// GET /api/v1/students/:id/invoices
+export async function getStudentInvoices(id: number): Promise<ApiResponse<StudentInvoice[]>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}/invoices`, { headers: authHeaders() });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Failed to fetch student invoices" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// GET /api/v1/students/:id/attendance_logs
+export async function getStudentAttendance(id: number): Promise<ApiResponse<AttendanceLog[]>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}/attendance_logs`, { headers: authHeaders() });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Failed to fetch attendance" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// GET /api/v1/students/:id/lms_progress
+export async function getStudentLmsProgress(id: number): Promise<ApiResponse<LmsProgress>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/students/${id}/lms_progress`, { headers: authHeaders() });
+    const json = await response.json();
+    if (!response.ok) return { success: false, error: json.error || "Failed to fetch LMS progress" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// POST /api/v1/invoices/:id/mark_paid (with payload)
+export async function markInvoiceAsPaid(
+  id: number,
+  payload?: Record<string, unknown>,
+): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/invoices/${id}/mark_paid`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: payload ? JSON.stringify(payload) : undefined,
     });
     const json = await res.json();
     if (!res.ok) return { success: false, error: json.error || "Failed to mark invoice paid" };

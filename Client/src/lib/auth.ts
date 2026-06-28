@@ -23,6 +23,10 @@ export function removeToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+export function isAdmin(role: UserRole | string): boolean {
+  return role === "admin";
+}
+
 export async function getCurrentUser(): Promise<User | null> {
   try {
     const token = getToken();

@@ -29,7 +29,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function setCookie(name: string, value: string, days = 7) {
   if (typeof document === "undefined") return;
