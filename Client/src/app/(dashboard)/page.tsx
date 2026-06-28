@@ -48,7 +48,7 @@ const quickActions = [
   {
     label: "Reports",
     description: "View aggregate reports and analytics",
-    href: "#",
+    href: "/reports",
     icon: FileText,
     color: "bg-emerald-500",
   },
