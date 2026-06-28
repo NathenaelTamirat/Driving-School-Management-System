@@ -558,6 +558,7 @@ export type Batch = {
   id: number;
   name: string;
   status: string;
+  created_at: string;
 };
 
 // GET /api/v1/students/:id/attendance_logs
