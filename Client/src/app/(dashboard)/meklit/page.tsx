@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, startTransition } from "react";
-import { Send, RefreshCw, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Send, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,17 +38,23 @@ export default function MeklitPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchBatches = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/batches`, { headers: authHeaders() });
       const json = await res.json();
       if (json.success) {
         const data = json.data?.batches || json.data || [];
         setBatches(Array.isArray(data) ? data : []);
+      } else {
+        setError(json.errors?.[0] || "Failed to load batches");
       }
-    } catch { /* silent */ }
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
     setLoading(false);
   };
 
@@ -56,6 +62,7 @@ export default function MeklitPage() {
 
   const submitBatch = async (batchId: number) => {
     setSubmitting(batchId);
+    setError(null);
     try {
       await fetch(`${API_BASE_URL}/api/v1/batches/${batchId}`, {
         method: "PATCH",
@@ -63,7 +70,9 @@ export default function MeklitPage() {
         body: JSON.stringify({ batch: { status: "submitted" } }),
       });
       fetchBatches();
-    } catch { /* silent */ }
+    } catch {
+      setError("Failed to submit batch");
+    }
     setSubmitting(null);
   };
 
@@ -84,6 +93,16 @@ export default function MeklitPage() {
           Refresh
         </Button>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={fetchBatches}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-4">
         <Card>

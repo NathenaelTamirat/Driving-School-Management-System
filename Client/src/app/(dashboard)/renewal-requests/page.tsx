@@ -2,6 +2,8 @@
 
 import { useEffect, useState, startTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { getRenewalRequests, type RenewalRequest } from "@/lib/api";
 
 const statusStyles: Record<string, string> = {
@@ -14,23 +16,42 @@ const statusStyles: Record<string, string> = {
 export default function RenewalRequestsPage() {
   const [requests, setRequests] = useState<RenewalRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    startTransition(async () => {
+  const fetchRequests = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const res = await getRenewalRequests();
       if (res.success && res.data) {
         const data = typeof res.data === "object" && "data" in res.data ? (res.data as any).data : res.data;
         setRequests(Array.isArray(data) ? data : []);
+      } else {
+        setError(res.errors?.[0] || "Failed to load renewal requests");
       }
-      setLoading(false);
-    });
-  }, []);
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { startTransition(() => fetchRequests()); }, []);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Renewal Requests</h1>
 
-      {loading ? (
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={fetchRequests}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
+
+      {!error && (loading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted rounded animate-pulse" />)}</div>
       ) : requests.length === 0 ? (
         <Card><CardContent className="p-8 text-center text-muted-foreground">No renewal requests found.</CardContent></Card>
@@ -59,7 +80,7 @@ export default function RenewalRequestsPage() {
             </tbody>
           </table>
         </div>
-      )}
+      ))}
     </div>
   );
 }

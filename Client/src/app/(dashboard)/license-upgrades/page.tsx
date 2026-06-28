@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, startTransition } from "react";
-import { ArrowUpCircle } from "lucide-react";
+import { ArrowUpCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getLicenseUpgrades, approveLicenseUpgrade, type LicenseUpgrade } from "@/lib/api";
@@ -15,13 +15,21 @@ const statusStyles: Record<string, string> = {
 export default function LicenseUpgradesPage() {
   const [upgrades, setUpgrades] = useState<LicenseUpgrade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchUpgrades = async () => {
     setLoading(true);
-    const res = await getLicenseUpgrades();
-    if (res.success && res.data) {
-      const data = typeof res.data === "object" && "data" in res.data ? (res.data as any).data : res.data;
-      setUpgrades(Array.isArray(data) ? data : []);
+    setError(null);
+    try {
+      const res = await getLicenseUpgrades();
+      if (res.success && res.data) {
+        const data = typeof res.data === "object" && "data" in res.data ? (res.data as any).data : res.data;
+        setUpgrades(Array.isArray(data) ? data : []);
+      } else {
+        setError(res.errors?.[0] || "Failed to load upgrades");
+      }
+    } catch {
+      setError("Network error. Please check your connection.");
     }
     setLoading(false);
   };
@@ -29,8 +37,12 @@ export default function LicenseUpgradesPage() {
   useEffect(() => { startTransition(() => fetchUpgrades()); }, []);
 
   const handleApprove = async (id: number) => {
-    await approveLicenseUpgrade(id);
-    fetchUpgrades();
+    try {
+      await approveLicenseUpgrade(id);
+      fetchUpgrades();
+    } catch {
+      setError("Failed to approve upgrade");
+    }
   };
 
   return (
@@ -39,7 +51,17 @@ export default function LicenseUpgradesPage() {
         <h1 className="text-2xl font-bold tracking-tight">License Upgrades</h1>
       </div>
 
-      {loading ? (
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={fetchUpgrades}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
+
+      {!error && (loading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted rounded animate-pulse" />)}</div>
       ) : upgrades.length === 0 ? (
         <Card><CardContent className="p-8 text-center text-muted-foreground">No license upgrade requests found.</CardContent></Card>
@@ -79,7 +101,7 @@ export default function LicenseUpgradesPage() {
             </tbody>
           </table>
         </div>
-      )}
+      ))}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, startTransition } from "react";
-import { TrendingUp, DollarSign, CreditCard, BarChart3, Download } from "lucide-react";
+import { TrendingUp, DollarSign, CreditCard, BarChart3, Download, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -24,15 +24,18 @@ type SummaryData = {
 export default function ReportsPage() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchSummary = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/financial_reports/summary`, { headers: authHeaders() });
       const json = await res.json();
       if (json.success) setSummary(json.data);
+      else setError(json.errors?.[0] || "Failed to load financial summary");
     } catch {
-      // silent
+      setError("Network error. Please check your connection.");
     }
     setLoading(false);
   };
@@ -78,6 +81,16 @@ export default function ReportsPage() {
         </Button>
       </div>
 
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={fetchSummary}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
@@ -87,7 +100,7 @@ export default function ReportsPage() {
             </Card>
           ))}
         </div>
-      ) : (
+      ) : !error && (
         <div className="grid grid-cols-4 gap-4">
           {statCards.map(({ label, value, icon: Icon, color }) => (
             <Card key={label}>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Users, DollarSign, CalendarCheck, FileText, Search, CheckCircle } from "lucide-react";
+import { Plus, Users, DollarSign, CalendarCheck, FileText, Search, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { getStudents, getInvoices, markInvoicePaid, type Student, type Invoice } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,18 +25,28 @@ export default function ClerkPage() {
   const [examType, setExamType] = useState("theory");
   const [examDate, setExamDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchData = () => Promise.all([getStudents(), getInvoices()]).then(([sRes, iRes]) => {
-    if (sRes.success && sRes.data) {
-      const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
-      setStudents(Array.isArray(data) ? data : []);
-    }
-    if (iRes.success && iRes.data) {
-      const data = typeof iRes.data === "object" && "data" in iRes.data ? (iRes.data as any).data : iRes.data;
-      setInvoices(Array.isArray(data) ? data : []);
-    }
-    setLoading(false);
-  });
+  const fetchData = () => {
+    setLoading(true);
+    setError(null);
+    Promise.all([getStudents(), getInvoices()]).then(([sRes, iRes]) => {
+      if (!sRes.success) setError(sRes.errors?.[0] || "Failed to load students");
+      if (!iRes.success) setError(iRes.errors?.[0] || "Failed to load invoices");
+      if (sRes.success && sRes.data) {
+        const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
+        setStudents(Array.isArray(data) ? data : []);
+      }
+      if (iRes.success && iRes.data) {
+        const data = typeof iRes.data === "object" && "data" in iRes.data ? (iRes.data as any).data : iRes.data;
+        setInvoices(Array.isArray(data) ? data : []);
+      }
+      setLoading(false);
+    }).catch(() => {
+      setError("Network error. Please check your connection.");
+      setLoading(false);
+    });
+  };
 
   useEffect(() => { fetchData(); }, []);
 
@@ -51,20 +61,31 @@ export default function ClerkPage() {
   const pendingInvoices = useMemo(() => invoices.filter((i) => i.status === "pending"), [invoices]);
 
   const handleMarkPaid = async (id: number) => {
-    await markInvoicePaid(id);
-    fetchData();
+    setError(null);
+    try {
+      const res = await markInvoicePaid(id);
+      if (!res.success) setError(res.errors?.[0] || "Failed to mark invoice paid");
+      fetchData();
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
   };
 
   const handleCreateExamBooking = async () => {
     if (!examStudent || !examDate) return;
     setSubmitting(true);
+    setError(null);
     try {
-      await fetch(`${API_BASE_URL}/api/v1/students/${examStudent}/exam_bookings`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/students/${examStudent}/exam_bookings`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ exam_booking: { exam_type: examType, scheduled_date: examDate } }),
       });
-    } catch { /* silent */ }
+      const json = await res.json();
+      if (!json.success) setError(json.errors?.[0] || "Failed to create exam booking");
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
     setSubmitting(false);
   };
 
@@ -95,6 +116,16 @@ export default function ClerkPage() {
           </Link>
         </Button>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={() => { setError(null); fetchData(); }}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, startTransition } from "react";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,33 +15,52 @@ export default function MockTestsPage() {
   const [tests, setTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    startTransition(async () => {
+  const fetchStudents = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const res = await getStudents();
       if (res.success && res.data) setStudents(res.data);
-      setLoading(false);
-    });
-  }, []);
+      else setError(res.errors?.[0] || "Failed to load students");
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { startTransition(() => fetchStudents()); }, []);
 
   const loadTests = async (studentId: number) => {
-    const res = await getMockTests(studentId);
-    if (res.success && res.data) {
-      const data = typeof res.data === "object" && "data" in res.data ? (res.data as any).data : res.data;
-      setTests(Array.isArray(data) ? data : []);
+    try {
+      const res = await getMockTests(studentId);
+      if (res.success && res.data) {
+        const data = typeof res.data === "object" && "data" in res.data ? (res.data as any).data : res.data;
+        setTests(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      setError("Failed to load mock tests");
     }
   };
 
   const handleSubmit = async () => {
     if (!selectedStudent || !score) return;
     setSubmitting(true);
-    const res = await createMockTest(Number(selectedStudent), {
-      score: Number(score),
-      test_date: new Date().toISOString().split("T")[0],
-    });
-    if (res.success) {
-      setScore("");
-      loadTests(Number(selectedStudent));
+    setError(null);
+    try {
+      const res = await createMockTest(Number(selectedStudent), {
+        score: Number(score),
+        test_date: new Date().toISOString().split("T")[0],
+      });
+      if (res.success) {
+        setScore("");
+        loadTests(Number(selectedStudent));
+      } else {
+        setError(res.errors?.[0] || "Failed to record mock test");
+      }
+    } catch {
+      setError("Network error. Please check your connection.");
     }
     setSubmitting(false);
   };
@@ -49,6 +68,16 @@ export default function MockTestsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Mock Tests</h1>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={() => setError(null)}>
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       <Card>
         <CardHeader><CardTitle>Record Mock Test</CardTitle></CardHeader>
@@ -58,11 +87,15 @@ export default function MockTestsPage() {
             <Select value={selectedStudent} onValueChange={(v) => { setSelectedStudent(v); loadTests(Number(v)); }}>
               <SelectTrigger><SelectValue placeholder="Select student..." /></SelectTrigger>
               <SelectContent>
-                {students.filter((s) => s.status === "theory_in_progress").map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>
-                    {s.first_name} {s.middle_name} ({s.student_id})
-                  </SelectItem>
-                ))}
+                {loading ? (
+                  <SelectItem value="" disabled>Loading students...</SelectItem>
+                ) : (
+                  students.filter((s) => s.status === "theory_in_progress").map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.first_name} {s.middle_name} ({s.student_id})
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

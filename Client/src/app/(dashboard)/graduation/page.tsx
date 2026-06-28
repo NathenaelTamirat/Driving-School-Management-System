@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, startTransition } from "react";
-import { GraduationCap, Search } from "lucide-react";
+import { GraduationCap, Search, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,27 +22,41 @@ export default function GraduationPage() {
   const [record, setRecord] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    startTransition(async () => {
+  const fetchStudentsList = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const res = await getStudents();
       if (res.success && res.data) setStudents(res.data);
-      setLoading(false);
-    });
-  }, []);
+      else setError(res.errors?.[0] || "Failed to load students");
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { startTransition(() => fetchStudentsList()); }, []);
 
   const selectStudent = async (s: Student) => {
     setSelected(s);
     setProgress(null);
     setRecord(null);
-    const [pRes, gRes] = await Promise.all([getLmsProgress(s.id), getGraduationRecord(s.id)]);
-    if (pRes.success && pRes.data) setProgress(pRes.data);
-    if (gRes.success && gRes.data) setRecord(gRes.data);
+    setError(null);
+    try {
+      const [pRes, gRes] = await Promise.all([getLmsProgress(s.id), getGraduationRecord(s.id)]);
+      if (pRes.success && pRes.data) setProgress(pRes.data);
+      if (gRes.success && gRes.data) setRecord(gRes.data);
+    } catch {
+      setError("Failed to load student details");
+    }
   };
 
   const handleGraduate = async () => {
     if (!selected) return;
     setProcessing(true);
+    setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/students/${selected.id}/graduation_record`, {
         method: "POST",
@@ -52,8 +66,12 @@ export default function GraduationPage() {
       if (json.success) {
         setRecord(json.data);
         selectStudent(selected);
+      } else {
+        setError(json.errors?.[0] || "Graduation failed");
       }
-    } catch { /* silent */ }
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
     setProcessing(false);
   };
 
@@ -72,6 +90,16 @@ export default function GraduationPage() {
           <span>Graduated: <strong>{graduated.length}</strong></span>
         </div>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={() => { setError(null); fetchStudentsList(); }}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-6">
         <Card className="col-span-1">

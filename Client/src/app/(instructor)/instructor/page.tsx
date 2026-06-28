@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { BookOpen, Users, ClipboardCheck, DollarSign, CheckCircle, AlertCircle, CalendarCheck, ClipboardList } from "lucide-react";
+import { BookOpen, Users, ClipboardCheck, DollarSign, CheckCircle, AlertCircle, CalendarCheck, ClipboardList, RefreshCw } from "lucide-react";
 import { getStudents, createAttendanceLog, createMockTest, getPayrollEntries, type Student, type PayrollEntry } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,14 @@ export default function InstructorPage() {
   const [mockStudent, setMockStudent] = useState("");
   const [mockScore, setMockScore] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchData = () => {
+    setLoading(true);
+    setError(null);
     Promise.all([getStudents(), getPayrollEntries()]).then(([sRes, pRes]) => {
+      if (!sRes.success) setError(sRes.errors?.[0] || "Failed to load students");
+      if (!pRes.success) setError(pRes.errors?.[0] || "Failed to load payroll");
       if (sRes.success && sRes.data) {
         const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
         setStudents(Array.isArray(data) ? data : []);
@@ -36,8 +41,13 @@ export default function InstructorPage() {
         setPayrollEntries(Array.isArray(data) ? data : []);
       }
       setLoading(false);
+    }).catch(() => {
+      setError("Network error. Please check your connection.");
+      setLoading(false);
     });
-  }, []);
+  };
+
+  useEffect(() => { fetchData(); }, []);
 
   const myStudents = useMemo(
     () => students.filter((s) => ["theory_in_progress", "practical_in_progress", "exam_eligible"].includes(s.status)),
@@ -47,22 +57,37 @@ export default function InstructorPage() {
   const handleAttendanceSubmit = async () => {
     if (!attendanceStudent) return;
     setSubmitting(true);
-    await createAttendanceLog(Number(attendanceStudent), {
-      phase: attendancePhase,
-      attendance_date: new Date().toISOString().split("T")[0],
-      present: attendancePresent,
-    });
+    setError(null);
+    try {
+      const res = await createAttendanceLog(Number(attendanceStudent), {
+        phase: attendancePhase,
+        attendance_date: new Date().toISOString().split("T")[0],
+        present: attendancePresent,
+      });
+      if (!res.success) setError(res.errors?.[0] || "Failed to log attendance");
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
     setSubmitting(false);
   };
 
   const handleMockSubmit = async () => {
     if (!mockStudent || !mockScore) return;
     setSubmitting(true);
-    await createMockTest(Number(mockStudent), {
-      score: Number(mockScore),
-      test_date: new Date().toISOString().split("T")[0],
-    });
-    setMockScore("");
+    setError(null);
+    try {
+      const res = await createMockTest(Number(mockStudent), {
+        score: Number(mockScore),
+        test_date: new Date().toISOString().split("T")[0],
+      });
+      if (res.success) {
+        setMockScore("");
+      } else {
+        setError(res.errors?.[0] || "Failed to record mock test");
+      }
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
     setSubmitting(false);
   };
 
@@ -85,6 +110,16 @@ export default function InstructorPage() {
         <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">Instructor Overview</h1>
         <p className="mt-1 text-sm text-muted-foreground">Student progress tracking, attendance, mock tests, and payroll.</p>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={() => { setError(null); fetchData(); }}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>

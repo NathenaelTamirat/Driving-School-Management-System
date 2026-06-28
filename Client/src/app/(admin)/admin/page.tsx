@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import {
-  Users, UserCheck, DollarSign, FileText, Activity, AlertTriangle, Plus, Layers, Shield
+  Users, UserCheck, DollarSign, FileText, Activity, AlertTriangle, Plus, Layers, Shield, RefreshCw, AlertCircle
 } from "lucide-react";
 import { getStudents, getUsers, getBatches, createUser, createBatch, type Student, type User, type Batch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,22 +22,33 @@ export default function AdminPage() {
   const [userPassword, setUserPassword] = useState("");
   const [batchName, setBatchName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchData = () => Promise.all([getStudents(), getUsers(), getBatches()]).then(([sRes, uRes, bRes]) => {
-    if (sRes.success && sRes.data) {
-      const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
-      setStudents(Array.isArray(data) ? data : []);
-    }
-    if (uRes.success && uRes.data) {
-      const data = typeof uRes.data === "object" && "data" in uRes.data ? (uRes.data as any).data : uRes.data;
-      setUsers(Array.isArray(data) ? data : []);
-    }
-    if (bRes.success && bRes.data) {
-      const data = typeof bRes.data === "object" && "data" in bRes.data ? (bRes.data as any).data : bRes.data;
-      setBatches(Array.isArray(data) ? data : []);
-    }
-    setLoading(false);
-  });
+  const fetchData = () => {
+    setLoading(true);
+    setError(null);
+    Promise.all([getStudents(), getUsers(), getBatches()]).then(([sRes, uRes, bRes]) => {
+      if (!sRes.success) setError(sRes.errors?.[0] || "Failed to load students");
+      if (!uRes.success) setError(uRes.errors?.[0] || "Failed to load users");
+      if (!bRes.success) setError(bRes.errors?.[0] || "Failed to load batches");
+      if (sRes.success && sRes.data) {
+        const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
+        setStudents(Array.isArray(data) ? data : []);
+      }
+      if (uRes.success && uRes.data) {
+        const data = typeof uRes.data === "object" && "data" in uRes.data ? (uRes.data as any).data : uRes.data;
+        setUsers(Array.isArray(data) ? data : []);
+      }
+      if (bRes.success && bRes.data) {
+        const data = typeof bRes.data === "object" && "data" in bRes.data ? (bRes.data as any).data : bRes.data;
+        setBatches(Array.isArray(data) ? data : []);
+      }
+      setLoading(false);
+    }).catch(() => {
+      setError("Network error. Please check your connection.");
+      setLoading(false);
+    });
+  };
 
   useEffect(() => { fetchData(); }, []);
 
@@ -57,25 +68,43 @@ export default function AdminPage() {
   const handleCreateUser = async () => {
     if (!userName || !userEmail || !userPassword) return;
     setSubmitting(true);
-    await createUser({
-      full_name: userName,
-      email: userEmail,
-      role: userRole,
-      password: userPassword,
-      password_confirmation: userPassword,
-    });
-    setUserName(""); setUserEmail(""); setUserPassword("");
+    setError(null);
+    try {
+      const res = await createUser({
+        full_name: userName,
+        email: userEmail,
+        role: userRole,
+        password: userPassword,
+        password_confirmation: userPassword,
+      });
+      if (res.success) {
+        setUserName(""); setUserEmail(""); setUserPassword("");
+        fetchData();
+      } else {
+        setError(res.errors?.[0] || "Failed to create user");
+      }
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
     setSubmitting(false);
-    fetchData();
   };
 
   const handleCreateBatch = async () => {
     if (!batchName) return;
     setSubmitting(true);
-    await createBatch({ name: batchName, status: "pending" });
-    setBatchName("");
+    setError(null);
+    try {
+      const res = await createBatch({ name: batchName, status: "pending" });
+      if (res.success) {
+        setBatchName("");
+        fetchData();
+      } else {
+        setError(res.errors?.[0] || "Failed to create batch");
+      }
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
     setSubmitting(false);
-    fetchData();
   };
 
   if (loading) {
@@ -99,6 +128,16 @@ export default function AdminPage() {
           <p className="mt-1 text-sm text-muted-foreground">System administration, user management, and batch controls.</p>
         </div>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={() => { setError(null); fetchData(); }}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Users} label="Total Users" value={stats.totalUsers} color="bg-blue-500" />

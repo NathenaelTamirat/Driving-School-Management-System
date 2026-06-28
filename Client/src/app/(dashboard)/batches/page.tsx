@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, startTransition } from "react";
-import { Plus, Layers, Search, Eye } from "lucide-react";
+import { Plus, Layers, Search, Eye, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,17 +36,23 @@ export default function BatchesPage() {
   const [batchName, setBatchName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [selected, setSelected] = useState<Batch | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchBatches = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/batches`, { headers: authHeaders() });
       const json = await res.json();
       if (json.success) {
         const data = json.data?.batches || json.data || [];
         setBatches(Array.isArray(data) ? data : []);
+      } else {
+        setError(json.errors?.[0] || "Failed to load batches");
       }
-    } catch { /* silent */ }
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
     setLoading(false);
   };
 
@@ -55,6 +61,7 @@ export default function BatchesPage() {
   const handleCreate = async () => {
     if (!batchName) return;
     setSubmitting(true);
+    setError(null);
     try {
       await fetch(`${API_BASE_URL}/api/v1/batches`, {
         method: "POST",
@@ -63,7 +70,9 @@ export default function BatchesPage() {
       });
       setBatchName("");
       fetchBatches();
-    } catch { /* silent */ }
+    } catch {
+      setError("Failed to create batch");
+    }
     setSubmitting(false);
   };
 
@@ -83,6 +92,16 @@ export default function BatchesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Batches</h1>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={fetchBatches}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-4">
         <Card>

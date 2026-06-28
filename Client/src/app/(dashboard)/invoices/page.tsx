@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -48,6 +48,7 @@ export default function InvoicesPage() {
   const [typeFilter, setTypeFilter] = useState("");
   const [page, setPage] = useState(1);
   const [payingInvoice, setPayingInvoice] = useState<StudentInvoice | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -57,7 +58,9 @@ export default function InvoicesPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => {
+  const loadInvoices = () => {
+    setLoading(true);
+    setError(null);
     getInvoices({
       status: statusFilter || undefined,
       invoice_type: typeFilter || undefined,
@@ -68,10 +71,17 @@ export default function InvoicesPage() {
       if (res.success && res.data) {
         setInvoices(res.data.invoices);
         if (res.data.meta) setMeta(res.data.meta);
+      } else {
+        setError(res.errors?.[0] || "Failed to load invoices");
       }
       setLoading(false);
+    }).catch(() => {
+      setError("Network error. Please check your connection.");
+      setLoading(false);
     });
-  }, [statusFilter, typeFilter, debouncedSearch, page]);
+  };
+
+  useEffect(() => { loadInvoices(); }, [statusFilter, typeFilter, debouncedSearch, page]);
 
   const handleStatusFilter = (value: string) => {
     setStatusFilter(value);
@@ -190,6 +200,16 @@ export default function InvoicesPage() {
         </Select>
       </div>
 
+      {error && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={loadInvoices}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
         data={invoices}
@@ -242,18 +262,7 @@ export default function InvoicesPage() {
           onClose={() => setPayingInvoice(null)}
           onSuccess={() => {
             setPayingInvoice(null);
-            getInvoices({
-              status: statusFilter || undefined,
-              invoice_type: typeFilter || undefined,
-              search: debouncedSearch || undefined,
-              page,
-              per_page: 20,
-            }).then((res) => {
-              if (res.success && res.data) {
-                setInvoices(res.data.invoices);
-                if (res.data.meta) setMeta(res.data.meta);
-              }
-            });
+            loadInvoices();
           }}
         />
       )}
