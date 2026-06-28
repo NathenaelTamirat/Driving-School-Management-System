@@ -122,6 +122,13 @@ RSpec.describe 'Api::V1::ExamBookings', type: :request do
         expect(exam_booking.score).to eq(75)
         expect(student.reload.under_penalty).to be false
       end
+
+      it 'does not enqueue penalty invoice job for passing score' do
+        result_params = { exam_booking: { score: 75 } }
+        expect {
+          post "/api/v1/students/#{student.id}/exam_bookings/#{exam_booking.id}/record_result", params: result_params, headers: auth_headers(clerk)
+        }.not_to have_enqueued_job(PenaltyInvoiceGeneratorJob)
+      end
     end
 
     context 'when recording a failing score' do
@@ -138,6 +145,17 @@ RSpec.describe 'Api::V1::ExamBookings', type: :request do
         expect(exam_booking.score).to eq(30)
         expect(student.reload.under_penalty).to be true
         expect(student.penalty_end_date).not_to be_nil
+      end
+
+      it 'enqueues penalty invoice job on failure' do
+        result_params = { exam_booking: { score: 30 } }
+        expect {
+          post "/api/v1/students/#{student.id}/exam_bookings/#{exam_booking.id}/record_result", params: result_params, headers: auth_headers(clerk)
+        }.to have_enqueued_job(PenaltyInvoiceGeneratorJob).with(
+          student_id: student.id,
+          penalty_type: "exam_failure",
+          attempt_number: 1
+        )
       end
     end
   end

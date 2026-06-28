@@ -75,6 +75,13 @@ module Api
           if @exam_booking.failed?
             penalty_engine = Penalty::PenaltyEngine.new(@student, @exam_booking)
             raise ActiveRecord::Rollback unless penalty_engine.apply_failure_penalty
+
+            attempt_number = count_exam_failure_attempts
+            PenaltyInvoiceGeneratorJob.perform_later(
+              student_id: @student.id,
+              penalty_type: "exam_failure",
+              attempt_number: attempt_number
+            )
           end
 
           committed = true
@@ -116,6 +123,14 @@ module Api
         unless validator.call
           render_error("Student not eligible for exam", status: :forbidden, errors: validator.errors)
         end
+      end
+
+      def count_exam_failure_attempts
+        Invoice.where(
+          student: @student,
+          milestone_type: Invoice::MILESTONE_TYPES[:government_penalty],
+          status: %w[pending paid]
+        ).count + 1
       end
 
       def exam_booking_params
