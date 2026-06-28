@@ -11,16 +11,16 @@ import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading, login } = useAuth();
+  const { user, isLoading, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace("/");
-  }, [loading, user, router]);
+    if (!isLoading && user) router.replace("/");
+  }, [isLoading, user, router]);
 
-  if (loading) return null;
+  if (isLoading) return null;
   if (user) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {

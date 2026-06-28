@@ -10,20 +10,20 @@ export default function InstructorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (
-      !loading &&
+      !isLoading &&
       (!user || (user.role !== "admin" && user.role !== "instructor"))
     ) {
       router.replace("/unauthorized");
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
   if (
-    loading ||
+    isLoading ||
     !user ||
     (user.role !== "admin" && user.role !== "instructor")
   )
