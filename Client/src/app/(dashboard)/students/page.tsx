@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, startTransition } from "react";
 import Link from "next/link";
-import { Plus, Search, Users, Layers, BookOpen, GraduationCap, ChevronLeft, ChevronRight, Eye, Pencil } from "lucide-react";
+import { Plus, Search, Users, Layers, BookOpen, GraduationCap, ChevronLeft, ChevronRight, Eye, Pencil, ArrowUpDown, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -60,9 +60,42 @@ export default function StudentsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [verifiedFilter, setVerifiedFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("student_id");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const perPage = 20;
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [sRes, bRes] = await Promise.all([getStudents(), getBatches()]);
+      if (sRes.success && sRes.data) {
+        const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
+        setAllStudents(Array.isArray(data) ? data : []);
+      } else {
+        setError(sRes.errors?.[0] || "Failed to load students");
+      }
+      if (bRes.success && bRes.data) {
+        const data = typeof bRes.data === "object" && "data" in bRes.data ? (bRes.data as any).data : bRes.data;
+        setBatches(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      setError("Network error. Please check your connection.");
+    }
+    setLoading(false);
+  };
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -312,7 +345,7 @@ export default function StudentsPage() {
                       {s.first_name} {s.middle_name} {s.last_name}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant={statusBadge[s.status] ?? "secondary"}>
+                      <Badge variant={statusBadgeVariant[s.status] ?? "secondary"}>
                         {statusLabels[s.status] ?? s.status}
                       </Badge>
                     </td>
@@ -334,7 +367,7 @@ export default function StudentsPage() {
             </tbody>
           </table>
         </div>
-      )}
+      </div>
 
       {/* Detail Modal (quick-view from other parts of the app) */}
       {selectedStudent && (

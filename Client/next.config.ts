@@ -7,6 +7,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: process.cwd(),
+  transpilePackages: ["recharts", "victory-vendor", "d3-scale", "d3-array", "d3-interpolate", "d3-color", "d3-format", "d3-time", "d3-time-format", "d3-shape", "d3-path"],
   turbopack: {
     root: process.cwd(),
   },

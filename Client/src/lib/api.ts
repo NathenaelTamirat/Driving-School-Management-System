@@ -391,26 +391,6 @@ export async function updateStudent(
   }
 }
 
-// POST /api/v1/auth/login
-export async function login(email: string, password: string): Promise<ApiResponse<{ user: User; token: string }>> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auth: { email, password } }),
-    });
-    const json = await response.json();
-    if (!response.ok) {
-      return { success: false, error: json.error?.message || json.error || "Invalid email or password" };
-    }
-    const token = json.data?.token;
-    if (token) setToken(token);
-    return { success: true, data: json.data };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Network error" };
-  }
-}
-
 // DELETE /api/v1/auth/logout
 export async function logout(): Promise<ApiResponse> {
   try {
