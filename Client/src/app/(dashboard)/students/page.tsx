@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { StudentDetailModal } from "@/components/student-detail-modal";
-import { getStudents, getBatches, type Student, type Batch } from "@/lib/api";
+import { firstError, getStudents, getBatches, type Student, type Batch } from "@/lib/api";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +76,7 @@ export default function StudentsPage() {
         const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
         setAllStudents(Array.isArray(data) ? data : []);
       } else {
-        setError(sRes.errors?.[0] || "Failed to load students");
+        setError(firstError(sRes.errors) || "Failed to load students");
       }
       if (bRes.success && bRes.data) {
         const data = typeof bRes.data === "object" && "data" in bRes.data ? (bRes.data as any).data : bRes.data;

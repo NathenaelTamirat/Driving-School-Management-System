@@ -28,7 +28,7 @@ export function generateInvoicePDF(invoice: StudentInvoice) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text(`Date: ${new Date(invoice.created_at).toLocaleDateString()}`, 20, y);
-  doc.text(`Due Date: ${new Date(invoice.due_date).toLocaleDateString()}`, pageWidth - 80, y);
+  doc.text(`Due Date: ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : "—"}`, pageWidth - 80, y);
   y += 6;
   if (invoice.paid_at) {
     doc.text(`Paid At: ${new Date(invoice.paid_at).toLocaleDateString()}`, pageWidth - 80, y);

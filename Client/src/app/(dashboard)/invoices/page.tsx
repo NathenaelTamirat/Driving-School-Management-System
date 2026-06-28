@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { PaymentRecordModal } from "@/components/payment-record-modal";
-import { getInvoices, type StudentInvoice, type PaginationMeta } from "@/lib/api";
+import { firstError, getInvoices, type StudentInvoice, type PaginationMeta } from "@/lib/api";
 
 const statusOptions = [
   { value: "", label: "All Statuses" },
@@ -72,7 +72,7 @@ export default function InvoicesPage() {
         setInvoices(res.data.invoices);
         if (res.data.meta) setMeta(res.data.meta);
       } else {
-        setError(res.errors?.[0] || "Failed to load invoices");
+        setError(firstError(res.errors) || "Failed to load invoices");
       }
       setLoading(false);
     }).catch(() => {
@@ -136,7 +136,7 @@ export default function InvoicesPage() {
     {
       header: "Due Date",
       cell: (inv) => (
-        <span className="text-slate-500">{new Date(inv.due_date).toLocaleDateString()}</span>
+        <span className="text-slate-500">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—"}</span>
       ),
     },
     {

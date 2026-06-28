@@ -4,7 +4,7 @@ import { useEffect, useState, startTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, RefreshCw } from "lucide-react";
-import { getRenewalRequests, type RenewalRequest } from "@/lib/api";
+import { firstError, getRenewalRequests, type RenewalRequest } from "@/lib/api";
 
 const statusStyles: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800",
@@ -27,7 +27,7 @@ export default function RenewalRequestsPage() {
         const data = typeof res.data === "object" && "data" in res.data ? (res.data as any).data : res.data;
         setRequests(Array.isArray(data) ? data : []);
       } else {
-        setError(res.errors?.[0] || "Failed to load renewal requests");
+        setError(firstError(res.errors) || "Failed to load renewal requests");
       }
     } catch {
       setError("Network error. Please check your connection.");

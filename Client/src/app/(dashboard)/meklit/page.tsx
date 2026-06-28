@@ -1,5 +1,6 @@
 "use client";
 
+import { firstError } from "@/lib/api";
 import { useEffect, useState, startTransition } from "react";
 import { Send, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,7 +51,7 @@ export default function MeklitPage() {
         const data = json.data?.batches || json.data || [];
         setBatches(Array.isArray(data) ? data : []);
       } else {
-        setError(json.errors?.[0] || "Failed to load batches");
+        setError(firstError(json.errors) || "Failed to load batches");
       }
     } catch {
       setError("Network error. Please check your connection.");

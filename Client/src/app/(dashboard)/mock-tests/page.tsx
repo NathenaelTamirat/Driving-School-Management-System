@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getStudents, getMockTests, createMockTest, type Student } from "@/lib/api";
+import { firstError, getStudents, getMockTests, createMockTest, type Student } from "@/lib/api";
 
 export default function MockTestsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -23,7 +23,7 @@ export default function MockTestsPage() {
     try {
       const res = await getStudents();
       if (res.success && res.data) setStudents(res.data);
-      else setError(res.errors?.[0] || "Failed to load students");
+      else setError(firstError(res.errors) || "Failed to load students");
     } catch {
       setError("Network error. Please check your connection.");
     }
@@ -57,7 +57,7 @@ export default function MockTestsPage() {
         setScore("");
         loadTests(Number(selectedStudent));
       } else {
-        setError(res.errors?.[0] || "Failed to record mock test");
+        setError(firstError(res.errors) || "Failed to record mock test");
       }
     } catch {
       setError("Network error. Please check your connection.");

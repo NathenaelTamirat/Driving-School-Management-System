@@ -1,4 +1,5 @@
 export type UserRole = "admin" | "clerk" | "instructor" | "student";
+export type Role = UserRole;
 
 export interface User {
   id: number;
@@ -23,7 +24,12 @@ export function removeToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-export function isAdmin(role: UserRole | string): boolean {
+export function isAdmin(role?: UserRole | string): boolean {
+  if (role === undefined) {
+    if (typeof window === "undefined") return false;
+    const stored = localStorage.getItem("role") || "";
+    return stored === "admin";
+  }
   return role === "admin";
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { firstError } from "@/lib/api";
 import { useEffect, useState, startTransition } from "react";
 import { TrendingUp, DollarSign, CreditCard, BarChart3, Download, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +34,7 @@ export default function ReportsPage() {
       const res = await fetch(`${API_BASE_URL}/api/v1/financial_reports/summary`, { headers: authHeaders() });
       const json = await res.json();
       if (json.success) setSummary(json.data);
-      else setError(json.errors?.[0] || "Failed to load financial summary");
+      else setError(firstError(json.errors) || "Failed to load financial summary");
     } catch {
       setError("Network error. Please check your connection.");
     }

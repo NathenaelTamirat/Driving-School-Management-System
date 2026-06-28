@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { BookOpen, Users, ClipboardCheck, DollarSign, CheckCircle, AlertCircle, CalendarCheck, ClipboardList, RefreshCw } from "lucide-react";
-import { getStudents, createAttendanceLog, createMockTest, getPayrollEntries, type Student, type PayrollEntry } from "@/lib/api";
+import { firstError, getStudents, createAttendanceLog, createMockTest, getPayrollEntries, type Student, type PayrollEntry } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +30,8 @@ export default function InstructorPage() {
     setLoading(true);
     setError(null);
     Promise.all([getStudents(), getPayrollEntries()]).then(([sRes, pRes]) => {
-      if (!sRes.success) setError(sRes.errors?.[0] || "Failed to load students");
-      if (!pRes.success) setError(pRes.errors?.[0] || "Failed to load payroll");
+      if (!sRes.success) setError(firstError(sRes.errors) || "Failed to load students");
+      if (!pRes.success) setError(firstError(pRes.errors) || "Failed to load payroll");
       if (sRes.success && sRes.data) {
         const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
         setStudents(Array.isArray(data) ? data : []);
@@ -64,7 +64,7 @@ export default function InstructorPage() {
         attendance_date: new Date().toISOString().split("T")[0],
         present: attendancePresent,
       });
-      if (!res.success) setError(res.errors?.[0] || "Failed to log attendance");
+      if (!res.success) setError(firstError(res.errors) || "Failed to log attendance");
     } catch {
       setError("Network error. Please check your connection.");
     }
@@ -83,7 +83,7 @@ export default function InstructorPage() {
       if (res.success) {
         setMockScore("");
       } else {
-        setError(res.errors?.[0] || "Failed to record mock test");
+        setError(firstError(res.errors) || "Failed to record mock test");
       }
     } catch {
       setError("Network error. Please check your connection.");
