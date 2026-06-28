@@ -778,6 +778,81 @@ export type LmsProgress = {
   next_milestone: string;
 };
 
+// GET /api/v1/payroll_entries
+export async function getPayrollEntries(userId?: number): Promise<ApiResponse<PayrollEntry[]>> {
+  try {
+    const params = userId ? `?user_id=${userId}` : "";
+    const res = await fetch(`${API_BASE_URL}/api/v1/payroll_entries${params}`, { headers: authHeaders() });
+    const json = await res.json();
+    if (!res.ok) return { success: false, error: json.error || "Failed to fetch payroll" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+export type PayrollEntry = {
+  id: number;
+  user_id: number;
+  instructor_name: string | null;
+  base_pay: number;
+  active_student_loads: number;
+  active_training_days: number;
+  total_pay: number;
+  period_start: string;
+  period_end: string;
+  status: string;
+  paid_at: string | null;
+  created_at: string;
+};
+
+// POST /api/v1/users
+export async function createUser(data: Record<string, unknown>): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ user: data }),
+    });
+    const json = await res.json();
+    if (!res.ok) return { success: false, error: json.error || "Failed to create user", errors: json.errors };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// POST /api/v1/batches
+export async function createBatch(data: Record<string, unknown>): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/batches`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ batch: data }),
+    });
+    const json = await res.json();
+    if (!res.ok) return { success: false, error: json.error || "Failed to create batch", errors: json.errors };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
+// POST /api/v1/invoices/:id/mark_paid
+export async function markInvoicePaid(id: number): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/invoices/${id}/mark_paid`, {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const json = await res.json();
+    if (!res.ok) return { success: false, error: json.error || "Failed to mark invoice paid" };
+    return { success: true, data: json };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
 // Type shape returned by GET /api/v1/course_categories.
 // Mirrors the structure in backend/config/course_categories.yml.
 export type CourseCategory = {
