@@ -165,7 +165,7 @@ export default function InvoiceDetailPage() {
                 <Calendar className="h-4 w-4 text-slate-400" />
                 <span className="text-slate-500">Due Date:</span>
                 <span className="font-medium text-[#0f172a]">
-                  {new Date(invoice.due_date).toLocaleDateString()}
+                  {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : "—"}
                 </span>
               </div>
               {invoice.paid_at ? (

@@ -5,7 +5,7 @@ import { GraduationCap, Search, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getStudents, getGraduationRecord, getLmsProgress, type Student } from "@/lib/api";
+import { firstError, getStudents, getGraduationRecord, getLmsProgress, type Student } from "@/lib/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -30,7 +30,7 @@ export default function GraduationPage() {
     try {
       const res = await getStudents();
       if (res.success && res.data) setStudents(res.data);
-      else setError(res.errors?.[0] || "Failed to load students");
+      else setError(firstError(res.errors) || "Failed to load students");
     } catch {
       setError("Network error. Please check your connection.");
     }
@@ -67,7 +67,7 @@ export default function GraduationPage() {
         setRecord(json.data);
         selectStudent(selected);
       } else {
-        setError(json.errors?.[0] || "Graduation failed");
+        setError(firstError(json.errors) || "Graduation failed");
       }
     } catch {
       setError("Network error. Please check your connection.");

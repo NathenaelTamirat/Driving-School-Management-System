@@ -41,6 +41,13 @@ type ApiResponse<T = unknown> = {
   errors?: string[] | Record<string, string[]>;
 };
 
+export function firstError(errors: string[] | Record<string, string[]> | undefined): string | undefined {
+  if (!errors) return undefined;
+  if (Array.isArray(errors)) return errors[0];
+  const vals = Object.values(errors);
+  return vals.length > 0 ? vals[0][0] : undefined;
+}
+
 import type { EnrollmentState, EnrollmentFormData } from "@/lib/enrollment-types";
 import { UPLOAD_SLOTS } from "@/lib/validations";
 
@@ -240,7 +247,7 @@ export async function submitEnrollmentFormData(
 }
 
 // GET /api/v1/students — returns the full student list.
-export async function getStudents(): Promise<ApiResponse<Student[]>> {
+export async function getStudents(params?: { page?: number; per_page?: number; search?: string; status?: string }): Promise<ApiResponse<Student[]>> {
   try {
     const query = new URLSearchParams();
     if (params?.page) query.set("page", String(params.page));
@@ -288,7 +295,7 @@ export type User = {
   id: number;
   email: string;
   full_name: string;
-  role: string;
+  role: "admin" | "instructor" | "clerk" | "student";
   phone_number: string | null;
   is_qualified_instructor: boolean;
   created_at: string;
@@ -443,10 +450,18 @@ export async function getStudentByUserId(userId: number): Promise<ApiResponse<St
   }
 }
 
+export type PaginationMeta = {
+  current_page: number;
+  total_pages: number;
+  total_count: number;
+  per_page: number;
+};
+
 // GET /api/v1/invoices — returns all invoices.
-export async function getInvoices(): Promise<ApiResponse<Invoice[]>> {
+export async function getInvoices(params?: Record<string, unknown>): Promise<ApiResponse<{ invoices: StudentInvoice[]; meta?: PaginationMeta }>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/invoices`, { headers: authHeaders() });
+    const qs = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
+    const response = await fetch(`${API_BASE_URL}/api/v1/invoices${qs}`, { headers: authHeaders() });
     const json = await response.json();
     if (!response.ok) return { success: false, error: json.error || "Failed to fetch invoices" };
     return { success: true, data: json };
@@ -466,16 +481,6 @@ export async function getUsers(): Promise<ApiResponse<User[]>> {
     return { success: false, error: err instanceof Error ? err.message : "Network error" };
   }
 }
-
-export type User = {
-  id: number;
-  email: string;
-  full_name: string;
-  role: "admin" | "instructor" | "clerk" | "student";
-  phone_number: string | null;
-  is_qualified_instructor: boolean;
-  created_at: string;
-};
 
 // Type shape returned by the backend Student index/show endpoints.
 // Mirrors the Rails model attributes from backend/app/models/student.rb.
@@ -551,6 +556,10 @@ export type StudentInvoice = Invoice & {
   invoice_number: string;
   student_name: string;
   invoice_type: string;
+  is_overdue?: boolean;
+  student_id?: number;
+  payment_method?: string;
+  payment_reference?: string;
 };
 
 // Type shape for the lightweight Batch model used in selector dropdowns.
@@ -728,9 +737,17 @@ export async function getLmsProgress(studentId: number): Promise<ApiResponse<Lms
 export type LmsProgress = {
   status: string;
   exam_eligible: boolean;
-  theory: { days_completed: number; days_required: number; percentage: number; complete: boolean };
-  practical: { days_completed: number; days_required: number; percentage: number; complete: boolean };
-  mock_test: { score: number; required: number; passed: boolean };
+  theory_percentage: number;
+  theory_completed: boolean;
+  theory_days_completed: number;
+  theory_days_required: number;
+  practical_percentage: number;
+  practical_completed: boolean;
+  practical_days_completed: number;
+  practical_days_required: number;
+  mock_test_status: string;
+  mock_test_score: number;
+  mock_test_required: number;
   next_milestone: string;
 };
 

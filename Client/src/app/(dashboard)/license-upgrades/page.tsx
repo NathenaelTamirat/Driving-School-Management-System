@@ -4,7 +4,7 @@ import { useEffect, useState, startTransition } from "react";
 import { ArrowUpCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getLicenseUpgrades, approveLicenseUpgrade, type LicenseUpgrade } from "@/lib/api";
+import { firstError, getLicenseUpgrades, approveLicenseUpgrade, type LicenseUpgrade } from "@/lib/api";
 
 const statusStyles: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -26,7 +26,7 @@ export default function LicenseUpgradesPage() {
         const data = typeof res.data === "object" && "data" in res.data ? (res.data as any).data : res.data;
         setUpgrades(Array.isArray(data) ? data : []);
       } else {
-        setError(res.errors?.[0] || "Failed to load upgrades");
+        setError(firstError(res.errors) || "Failed to load upgrades");
       }
     } catch {
       setError("Network error. Please check your connection.");

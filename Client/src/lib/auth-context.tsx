@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import {
   login as apiLogin,
   logout as apiLogout,
+  register as apiRegister,
   getMe,
   clearToken,
   getToken,
@@ -22,6 +23,14 @@ import {
 } from "@/lib/api";
 import { loadLicenseCategories } from "@/lib/enrollment-types";
 
+type RegisterParams = {
+  email: string;
+  password: string;
+  password_confirmation: string;
+  full_name: string;
+  phone_number?: string;
+};
+
 type AuthContextValue = {
   user: User | null;
   token: string | null;
@@ -29,6 +38,7 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
+  register: (params: RegisterParams) => Promise<string | null>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -57,6 +67,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTokenState(null);
     router.push("/login");
   }, [router]);
+
+  const register = useCallback(async (params: RegisterParams): Promise<string | null> => {
+    const result = await apiRegister(params);
+    if (result.success && result.data) {
+      setUser(result.data.user);
+      setTokenState(result.data.token);
+      return null;
+    }
+    return result.error || "Registration failed";
+  }, []);
 
   useEffect(() => {
     const storedToken = getToken();
@@ -127,8 +147,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, token, isLoading, isAuthenticated, login, logout }),
-    [user, token, isLoading, isAuthenticated, login, logout],
+    () => ({ user, token, isLoading, isAuthenticated, login, logout, register }),
+    [user, token, isLoading, isAuthenticated, login, logout, register],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

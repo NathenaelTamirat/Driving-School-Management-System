@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { Plus, Users, DollarSign, CalendarCheck, FileText, Search, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
-import { getStudents, getInvoices, markInvoicePaid, type Student, type Invoice } from "@/lib/api";
+import { firstError, getStudents, getInvoices, markInvoicePaid, type Student, type Invoice } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,8 +31,8 @@ export default function ClerkPage() {
     setLoading(true);
     setError(null);
     Promise.all([getStudents(), getInvoices()]).then(([sRes, iRes]) => {
-      if (!sRes.success) setError(sRes.errors?.[0] || "Failed to load students");
-      if (!iRes.success) setError(iRes.errors?.[0] || "Failed to load invoices");
+      if (!sRes.success) setError(firstError(sRes.errors) || "Failed to load students");
+      if (!iRes.success) setError(firstError(iRes.errors) || "Failed to load invoices");
       if (sRes.success && sRes.data) {
         const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
         setStudents(Array.isArray(data) ? data : []);
@@ -64,7 +64,7 @@ export default function ClerkPage() {
     setError(null);
     try {
       const res = await markInvoicePaid(id);
-      if (!res.success) setError(res.errors?.[0] || "Failed to mark invoice paid");
+      if (!res.success) setError(firstError(res.errors) || "Failed to mark invoice paid");
       fetchData();
     } catch {
       setError("Network error. Please check your connection.");
@@ -82,7 +82,7 @@ export default function ClerkPage() {
         body: JSON.stringify({ exam_booking: { exam_type: examType, scheduled_date: examDate } }),
       });
       const json = await res.json();
-      if (!json.success) setError(json.errors?.[0] || "Failed to create exam booking");
+      if (!json.success) setError(firstError(json.errors) || "Failed to create exam booking");
     } catch {
       setError("Network error. Please check your connection.");
     }

@@ -282,7 +282,7 @@ export default function StudentDetailPage() {
                               {inv.status}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-slate-500">{new Date(inv.due_date).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-slate-500">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—"}</td>
                         </tr>
                       ))}
                     </tbody>
