@@ -11,6 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
+function firstError(errors: string[] | Record<string, string[]> | undefined): string | undefined {
+  if (!errors) return undefined;
+  if (Array.isArray(errors)) return errors[0];
+  const vals = Object.values(errors);
+  return vals.length > 0 ? vals[0][0] : undefined;
+}
+
 export default function AdminPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -28,9 +35,9 @@ export default function AdminPage() {
     setLoading(true);
     setError(null);
     Promise.all([getStudents(), getUsers(), getBatches()]).then(([sRes, uRes, bRes]) => {
-      if (!sRes.success) setError(sRes.errors?.[0] || "Failed to load students");
-      if (!uRes.success) setError(uRes.errors?.[0] || "Failed to load users");
-      if (!bRes.success) setError(bRes.errors?.[0] || "Failed to load batches");
+      if (!sRes.success) setError(firstError(sRes.errors) || "Failed to load students");
+      if (!uRes.success) setError(firstError(uRes.errors) || "Failed to load users");
+      if (!bRes.success) setError(firstError(bRes.errors) || "Failed to load batches");
       if (sRes.success && sRes.data) {
         const data = typeof sRes.data === "object" && "data" in sRes.data ? (sRes.data as any).data : sRes.data;
         setStudents(Array.isArray(data) ? data : []);
@@ -81,7 +88,7 @@ export default function AdminPage() {
         setUserName(""); setUserEmail(""); setUserPassword("");
         fetchData();
       } else {
-        setError(res.errors?.[0] || "Failed to create user");
+        setError(firstError(res.errors) || "Failed to create user");
       }
     } catch {
       setError("Network error. Please check your connection.");
@@ -99,7 +106,7 @@ export default function AdminPage() {
         setBatchName("");
         fetchData();
       } else {
-        setError(res.errors?.[0] || "Failed to create batch");
+        setError(firstError(res.errors) || "Failed to create batch");
       }
     } catch {
       setError("Network error. Please check your connection.");
