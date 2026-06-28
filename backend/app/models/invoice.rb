@@ -9,11 +9,19 @@ class Invoice < ApplicationRecord
     government_penalty: "Government Penalty"
   }.freeze
 
+  MILESTONE_MAP = {
+    milestone_1: MILESTONE_TYPES[:registration_and_theory],
+    milestone_2: MILESTONE_TYPES[:practical_fee_release],
+    penalty: MILESTONE_TYPES[:government_penalty]
+  }.freeze
+
   STATUSES = %w[pending paid cancelled overdue].freeze
 
   validates :amount, presence: true, numericality: { greater_than: 0 }
   validates :milestone_type, presence: true, inclusion: { in: MILESTONE_TYPES.values }
   validates :status, presence: true, inclusion: { in: STATUSES }
+
+  before_create :generate_invoice_number
 
   scope :pending, -> { where(status: "pending") }
   scope :paid, -> { where(status: "paid") }
@@ -38,5 +46,20 @@ class Invoice < ApplicationRecord
 
   def cancel!
     update!(status: "cancelled")
+  end
+
+  def milestone_invoice?
+    milestone_type == MILESTONE_TYPES[:registration_and_theory] ||
+      milestone_type == MILESTONE_TYPES[:practical_fee_release]
+  end
+
+  def milestone_key
+    MILESTONE_MAP.key(milestone_type)
+  end
+
+  private
+
+  def generate_invoice_number
+    self.invoice_number ||= "INV-#{Time.current.strftime('%Y%m%d')}-#{SecureRandom.hex(4).upcase}"
   end
 end

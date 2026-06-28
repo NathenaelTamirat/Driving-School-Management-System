@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe ErtaCountdownMonitorJob, type: :job do
+RSpec.describe ERTACountdownMonitorJob, type: :job do
   describe "#perform" do
     let!(:student_approaching) do
       create(:student, status: "theory_in_progress",

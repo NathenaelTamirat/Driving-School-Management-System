@@ -28,7 +28,6 @@ class PenaltyInvoiceGeneratorJob < ApplicationJob
 
     invoice = Invoice.create!(
       student: student,
-      invoice_type: "penalty",
       milestone_type: Invoice::MILESTONE_TYPES[:government_penalty],
       amount: amount,
       due_date: 14.days.from_now,
@@ -55,7 +54,6 @@ class PenaltyInvoiceGeneratorJob < ApplicationJob
 
     invoice = Invoice.create!(
       student: student,
-      invoice_type: "penalty",
       milestone_type: Invoice::MILESTONE_TYPES[:government_penalty],
       amount: amount,
       due_date: 14.days.from_now,

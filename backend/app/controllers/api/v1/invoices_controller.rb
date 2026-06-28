@@ -8,15 +8,15 @@ module Api
       before_action :set_invoice, only: [:show, :mark_paid]
 
       # GET /api/v1/invoices
-      # Query params: status (pending/paid/overdue), invoice_type, student_id
+      # Query params: status (pending/paid/overdue), milestone_type, student_id
       def index
         invoices = Invoice.includes(:student).all
 
         # Filter by status
         invoices = invoices.where(status: params[:status]) if params[:status].present?
 
-        # Filter by invoice_type
-        invoices = invoices.where(invoice_type: params[:invoice_type]) if params[:invoice_type].present?
+        # Filter by milestone_type
+        invoices = invoices.where(milestone_type: params[:milestone_type]) if params[:milestone_type].present?
 
         # Filter by student_id
         invoices = invoices.where(student_id: params[:student_id]) if params[:student_id].present?
@@ -116,7 +116,7 @@ module Api
           invoice_number: invoice.invoice_number,
           student_id: invoice.student_id,
           student_name: invoice.student ? "#{invoice.student.first_name} #{invoice.student.last_name}" : nil,
-          invoice_type: invoice.invoice_type,
+          milestone_type: invoice.milestone_type,
           amount: invoice.amount,
           status: invoice.status,
           due_date: invoice.due_date,
@@ -143,10 +143,10 @@ module Api
       def update_student_milestone_flags
         student = @invoice.student
         
-        case @invoice.invoice_type
-        when 'milestone_1'
+        case @invoice.milestone_type
+        when Invoice::MILESTONE_TYPES[:registration_and_theory]
           student.update!(milestone_1_paid: true)
-        when 'milestone_2'
+        when Invoice::MILESTONE_TYPES[:practical_fee_release]
           student.update!(milestone_2_paid: true)
         end
       end

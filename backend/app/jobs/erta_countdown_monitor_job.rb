@@ -1,4 +1,4 @@
-class ErtaCountdownMonitorJob < ApplicationJob
+class ERTACountdownMonitorJob < ApplicationJob
   queue_as :default
 
   DAILY_CHECK_WINDOW = 5
@@ -6,7 +6,7 @@ class ErtaCountdownMonitorJob < ApplicationJob
   retry_on StandardError, wait: 5.minutes, attempts: 3
 
   def perform
-    Rails.logger.info "ErtaCountdownMonitorJob started at #{Time.current}"
+    Rails.logger.info "ERTACountdownMonitorJob started at #{Time.current}"
 
     results = { checked: 0, approaching_deadline: 0, past_deadline: 0, errors: [] }
 
@@ -15,7 +15,7 @@ class ErtaCountdownMonitorJob < ApplicationJob
       check_student_deadlines(student, results)
     end
 
-    Rails.logger.info "ErtaCountdownMonitorJob completed: #{results[:checked]} checked, #{results[:approaching_deadline]} approaching, #{results[:past_deadline]} overdue"
+    Rails.logger.info "ERTACountdownMonitorJob completed: #{results[:checked]} checked, #{results[:approaching_deadline]} approaching, #{results[:past_deadline]} overdue"
   end
 
   private

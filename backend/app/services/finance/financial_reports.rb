@@ -100,7 +100,7 @@ module Finance
     # Payment trends over the period
     def payment_trends
       invoices_in_period.paid
-        .group_by_day(:paid_at)
+        .group("DATE(paid_at)")
         .sum(:amount)
         .map { |date, amount| { date: date, amount: amount.to_f } }
     end

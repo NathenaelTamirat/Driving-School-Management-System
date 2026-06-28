@@ -25,6 +25,7 @@ module Finance
     #   - milestone_1_paid must be true
     #   - No existing milestone_2 invoice
     def generate_milestone_2_invoice
+      @result = { success: false, invoice: nil, errors: [] }
       validate_milestone_2_eligibility!
 
       invoice = create_milestone_2_invoice
@@ -77,7 +78,7 @@ module Finance
     def milestone_2_invoice_exists?
       Invoice.exists?(
         student: student,
-        invoice_type: 'milestone_2',
+        milestone_type: Invoice::MILESTONE_TYPES[:practical_fee_release],
         status: %w[pending paid]
       )
     end
@@ -85,17 +86,11 @@ module Finance
     def create_milestone_2_invoice
       Invoice.create!(
         student: student,
-        invoice_type: 'milestone_2',
-        amount: student.total_fee / 2.0, # 50% of total fee
+        milestone_type: Invoice::MILESTONE_TYPES[:practical_fee_release],
+        amount: student.total_fee / 2.0,
         due_date: 30.days.from_now,
         status: 'pending',
-        description: "Milestone 2 payment - Practical training phase (50% of total fee)",
-        metadata: {
-          generated_by: 'milestone_tracker',
-          state_transition: 'theory_in_progress -> practical_in_progress',
-          mock_test_score: student.mock_test_score,
-          generated_at: Time.current.iso8601
-        }
+        description: "Milestone 2 payment - Practical training phase (50% of total fee)"
       )
     end
   end

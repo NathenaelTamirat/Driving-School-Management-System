@@ -1,19 +1,14 @@
 # frozen_string_literal: true
 
 module Finance
-  # PayrollCalculator - Monthly instructor compensation calculation
-  # Calculates base salary + student load bonus + performance bonus
-  #
-  # Called by: PayrollComputeJob (monthly cron)
-  # Transaction boundary: Per-instructor atomic
   class PayrollCalculator
     class Error < StandardError; end
     class PayrollAlreadyExists < Error; end
 
-    BASE_SALARY = 15_000.00  # 15,000 ETB base salary
-    STUDENT_LOAD_BONUS = 200.00  # 200 ETB per student
-    PERFORMANCE_BONUS = 1_000.00  # 1,000 ETB if pass rate > 80%
-    PERFORMANCE_THRESHOLD = 80.0  # 80% pass rate threshold
+    BASE_SALARY = 15_000.00
+    STUDENT_LOAD_BONUS = 200.00
+    PERFORMANCE_BONUS = 1_000.00
+    PERFORMANCE_THRESHOLD = 80.0
 
     attr_reader :instructor, :month, :year, :result
 
@@ -24,8 +19,8 @@ module Finance
       @result = { success: false, payroll_entry: nil, breakdown: {}, errors: [] }
     end
 
-    # Calculate and create monthly payroll entry
     def calculate_payroll
+      @result = { success: false, payroll_entry: nil, breakdown: {}, errors: [] }
       validate_instructor!
       check_duplicate_payroll!
 
@@ -37,7 +32,7 @@ module Finance
       @result[:breakdown] = breakdown
 
       Rails.logger.info "Payroll calculated for Instructor ##{instructor.id} (#{month}/#{year}): #{breakdown[:total_salary]} ETB"
-      
+
       @result
     rescue PayrollAlreadyExists => e
       @result[:errors] << e.message
@@ -50,13 +45,9 @@ module Finance
       @result
     end
 
-    # Batch calculate: process all instructors for the given month (called by cron job)
     def self.calculate_all_for_month(month: Date.current.month, year: Date.current.year)
       results = { processed: 0, created: 0, skipped: 0, errors: [] }
 
-      # TODO: Replace with actual Instructor model query when implemented
-      # User.instructors.find_each do |instructor|
-      # For now, mock with users having role 'instructor'
       User.where(role: 'instructor').find_each do |instructor|
         results[:processed] += 1
 
@@ -88,8 +79,10 @@ module Finance
     end
 
     def check_duplicate_payroll!
-      payroll_date = Date.new(year, month, 1)
-      if PayrollEntry.exists?(instructor: instructor, payroll_month: payroll_date)
+      period_start = Date.new(year, month, 1)
+      period_end = period_start.end_of_month
+
+      if PayrollEntry.exists?(user_id: instructor.id, period_start: period_start, period_end: period_end)
         raise PayrollAlreadyExists, "Payroll entry already exists for #{month}/#{year}"
       end
     end
@@ -105,10 +98,10 @@ module Finance
       total = base + student_bonus + performance_bonus
 
       {
-        base_salary: base,
+        base_pay: base,
         student_load_bonus: student_bonus,
         performance_bonus: performance_bonus,
-        total_salary: total,
+        total_pay: total,
         student_count: student_count,
         pass_rate: pass_rate.round(2)
       }
@@ -122,9 +115,9 @@ module Finance
 
     def calculate_pass_rate
       total_exams = ExamBooking.joins(student: :instructor)
-                               .where(students: { instructor_id: instructor.id })
-                               .where.not(score: nil)
-                               .count
+                                .where(students: { instructor_id: instructor.id })
+                                .where.not(score: nil)
+                                .count
 
       return 0.0 if total_exams.zero?
 
@@ -137,15 +130,18 @@ module Finance
     end
 
     def create_payroll_entry(breakdown)
+      period_start = Date.new(year, month, 1)
+      period_end = period_start.end_of_month
+
       PayrollEntry.create!(
-        instructor: instructor,
-        payroll_month: Date.new(year, month, 1),
-        base_salary: breakdown[:base_salary],
-        student_count: breakdown[:student_count],
-        student_load_bonus: breakdown[:student_load_bonus],
-        performance_bonus: breakdown[:performance_bonus],
-        total_amount: breakdown[:total_salary],
-        payment_status: 'pending'
+        user_id: instructor.id,
+        base_pay: breakdown[:base_pay],
+        active_student_loads: breakdown[:student_count],
+        active_training_days: 0,
+        total_pay: breakdown[:total_pay],
+        period_start: period_start,
+        period_end: period_end,
+        status: 'draft'
       )
     end
   end

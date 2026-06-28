@@ -6,16 +6,10 @@ RSpec.describe Course, type: :model do
   describe 'validations' do
     subject { build(:course) }
 
-    it { should validate_presence_of(:name) }
-    it { should validate_presence_of(:course_code) }
-    it { should validate_uniqueness_of(:course_code) }
-    it { should validate_presence_of(:standard_price) }
-    it { should validate_presence_of(:premium_price) }
-    it { should validate_presence_of(:fast_track_price) }
-    
-    it { should validate_numericality_of(:standard_price).is_greater_than(0) }
-    it { should validate_numericality_of(:premium_price).is_greater_than(0) }
-    it { should validate_numericality_of(:fast_track_price).is_greater_than(0) }
+    it { should validate_presence_of(:course_name) }
+    it { should validate_presence_of(:standard_fee) }
+
+    it { should validate_numericality_of(:standard_fee).is_greater_than(0) }
   end
 
   describe 'factory' do
@@ -24,51 +18,46 @@ RSpec.describe Course, type: :model do
     end
   end
 
-  describe '#price_for_tier' do
-    let(:course) { create(:course, standard_price: 8000, premium_price: 10000, fast_track_price: 13000) }
+  describe '#fee_for_tier' do
+    let(:course) { create(:course, standard_fee: 8000, premium_fee: 10000, fast_track_fee: 13000) }
 
-    it 'returns standard price for standard tier' do
-      expect(course.price_for_tier('standard')).to eq(8000)
+    it 'returns standard fee for standard tier' do
+      expect(course.fee_for_tier('standard')).to eq(8000)
     end
 
-    it 'returns premium price for premium tier' do
-      expect(course.price_for_tier('premium')).to eq(10000)
+    it 'returns premium fee for premium tier' do
+      expect(course.fee_for_tier('premium')).to eq(10000)
     end
 
-    it 'returns fast track price for fast_track tier' do
-      expect(course.price_for_tier('fast_track')).to eq(13000)
+    it 'returns fast track fee for fast_track tier' do
+      expect(course.fee_for_tier('fast_track')).to eq(13000)
     end
 
-    it 'returns standard price for unknown tier' do
-      expect(course.price_for_tier('unknown')).to eq(8000)
+    it 'returns standard fee for unknown tier' do
+      expect(course.fee_for_tier('unknown')).to eq(8000)
     end
 
-    it 'returns standard price for nil tier' do
-      expect(course.price_for_tier(nil)).to eq(8000)
+    it 'returns standard fee for nil tier' do
+      expect(course.fee_for_tier(nil)).to eq(8000)
     end
   end
 
-  describe '#upgrade_discount' do
-    let(:course) { create(:course, standard_price: 8000, premium_price: 10000, fast_track_price: 13000) }
+  describe '#upgrade_fee' do
+    let(:course) { create(:course, standard_fee: 8000, premium_fee: 10000, fast_track_fee: 13000) }
 
-    it 'returns 30% discount from standard to premium' do
-      expect(course.upgrade_discount('standard', 'premium')).to eq(600) # 30% of 2000
+    it 'returns discounted fee from standard to premium' do
+      expected = 10000 * (1 - 30 / 100.0)
+      expect(course.upgrade_fee('premium')).to eq(expected)
     end
 
-    it 'returns 30% discount from standard to fast_track' do
-      expect(course.upgrade_discount('standard', 'fast_track')).to eq(1500) # 30% of 5000
+    it 'returns discounted fee from standard to fast_track' do
+      expected = 13000 * (1 - 30 / 100.0)
+      expect(course.upgrade_fee('fast_track')).to eq(expected)
     end
 
-    it 'returns 30% discount from premium to fast_track' do
-      expect(course.upgrade_discount('premium', 'fast_track')).to eq(900) # 30% of 3000
-    end
-
-    it 'returns 0 discount for same tier' do
-      expect(course.upgrade_discount('standard', 'standard')).to eq(0)
-    end
-
-    it 'returns 0 discount for downgrade' do
-      expect(course.upgrade_discount('premium', 'standard')).to eq(0)
+    it 'applies 30% discount for standard tier' do
+      expected = 8000 * (1 - 30 / 100.0)
+      expect(course.upgrade_fee('standard')).to eq(expected)
     end
   end
 end

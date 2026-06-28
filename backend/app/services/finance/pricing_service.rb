@@ -55,7 +55,7 @@ module Finance
     def create_initial_invoice
       Invoice.create!(
         student: @student,
-        invoice_type: @student.is_upgrade? ? 'upgrade' : 'registration',
+        milestone_type: Invoice::MILESTONE_TYPES[:registration_and_theory],
         amount: @milestone_1,
         description: "#{@student.is_upgrade? ? 'Upgrade' : 'Registration'} + Milestone 1 (50%)",
         due_date: Date.today + 7.days,

@@ -83,18 +83,16 @@ module Finance
     def attendance_penalty_exists?
       Invoice.exists?(
         student: student,
-        invoice_type: 'penalty',
-        status: %w[pending paid],
-        metadata: { penalty_reason: 'attendance_breach' }
+        milestone_type: Invoice::MILESTONE_TYPES[:government_penalty],
+        status: %w[pending paid]
       )
     end
 
     def exam_penalty_exists?(attempt_number)
       Invoice.exists?(
         student: student,
-        invoice_type: 'penalty',
-        status: %w[pending paid],
-        metadata: { penalty_reason: 'exam_failure', attempt_number: attempt_number }
+        milestone_type: Invoice::MILESTONE_TYPES[:government_penalty],
+        status: %w[pending paid]
       )
     end
 
@@ -108,7 +106,7 @@ module Finance
     def create_attendance_penalty_invoice(days_gap)
       Invoice.create!(
         student: student,
-        invoice_type: 'penalty',
+        milestone_type: Invoice::MILESTONE_TYPES[:government_penalty],
         amount: ATTENDANCE_BREACH_PENALTY,
         due_date: 14.days.from_now,
         status: 'pending',
@@ -126,7 +124,7 @@ module Finance
     def create_exam_failure_penalty_invoice(attempt_number, amount)
       Invoice.create!(
         student: student,
-        invoice_type: 'penalty',
+        milestone_type: Invoice::MILESTONE_TYPES[:government_penalty],
         amount: amount,
         due_date: 14.days.from_now,
         status: 'pending',

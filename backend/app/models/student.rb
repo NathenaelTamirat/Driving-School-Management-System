@@ -2,6 +2,7 @@ class Student < ApplicationRecord
   include AASM
 
   belongs_to :batch
+  belongs_to :course, optional: true
   belongs_to :instructor, class_name: "User", optional: true
   has_many :exam_bookings,   dependent: :destroy
   has_many :attendance_logs, dependent: :destroy

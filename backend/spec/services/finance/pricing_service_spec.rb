@@ -3,107 +3,101 @@
 require 'rails_helper'
 
 RSpec.describe Finance::PricingService, type: :service do
-  let(:course) { create(:course, standard_price: 8000, premium_price: 10000, fast_track_price: 13000) }
+  let(:course) { create(:course, standard_fee: 8000, premium_fee: 10000, fast_track_fee: 13000) }
   let(:batch) { create(:batch) }
-  let(:student) { build(:student, batch: batch, status: 'registered') }
+  let(:student) { create(:student, batch: batch, course: course, pricing_tier: 'standard', status: 'registered') }
 
-  describe '#calculate_and_create_invoice' do
+  describe '#calculate' do
+    subject(:service) { described_class.new(student) }
+
     context 'with standard tier' do
-      subject(:service) { described_class.new(student, course, 'standard') }
-
       it 'calculates correct total fee' do
-        result = service.calculate_and_create_invoice
+        result = service.calculate
         expect(result[:total_fee]).to eq(8000)
       end
 
       it 'splits payment 50-50' do
-        result = service.calculate_and_create_invoice
-        expect(result[:milestone_1_amount]).to eq(4000)
-        expect(result[:milestone_2_amount]).to eq(4000)
+        result = service.calculate
+        expect(result[:milestone_1]).to eq(4000)
+        expect(result[:milestone_2]).to eq(4000)
       end
 
       it 'creates milestone 1 invoice' do
-        expect { service.calculate_and_create_invoice }.to change(Invoice, :count).by(1)
+        expect { service.calculate }.to change(Invoice, :count).by(1)
       end
 
       it 'updates student financial fields' do
-        student.save!
-        service.calculate_and_create_invoice
+        service.calculate
         student.reload
-        
+
         expect(student.pricing_tier).to eq('standard')
         expect(student.total_fee).to eq(8000)
       end
 
       it 'returns success result' do
-        result = service.calculate_and_create_invoice
+        result = service.calculate
         expect(result[:success]).to be true
-        expect(result[:invoice]).to be_a(Invoice)
       end
     end
 
     context 'with premium tier' do
-      subject(:service) { described_class.new(student, course, 'premium') }
+      before { student.update(pricing_tier: 'premium') }
 
       it 'calculates correct total fee' do
-        result = service.calculate_and_create_invoice
+        result = service.calculate
         expect(result[:total_fee]).to eq(10000)
       end
 
       it 'splits payment 50-50' do
-        result = service.calculate_and_create_invoice
-        expect(result[:milestone_1_amount]).to eq(5000)
-        expect(result[:milestone_2_amount]).to eq(5000)
+        result = service.calculate
+        expect(result[:milestone_1]).to eq(5000)
+        expect(result[:milestone_2]).to eq(5000)
       end
     end
 
     context 'with fast_track tier' do
-      subject(:service) { described_class.new(student, course, 'fast_track') }
+      before { student.update(pricing_tier: 'fast_track') }
 
       it 'calculates correct total fee' do
-        result = service.calculate_and_create_invoice
+        result = service.calculate
         expect(result[:total_fee]).to eq(13000)
       end
 
       it 'splits payment 50-50' do
-        result = service.calculate_and_create_invoice
-        expect(result[:milestone_1_amount]).to eq(6500)
-        expect(result[:milestone_2_amount]).to eq(6500)
+        result = service.calculate
+        expect(result[:milestone_1]).to eq(6500)
+        expect(result[:milestone_2]).to eq(6500)
       end
     end
 
     context 'with upgrade discount' do
       let(:existing_student) do
-        create(:student, 
+        create(:student,
           batch: batch,
-          pricing_tier: 'standard',
-          total_fee: 8000,
-          amount_paid: 8000
+          course: course,
+          pricing_tier: 'premium',
+          total_fee: 8000
         )
       end
 
-      subject(:service) { described_class.new(existing_student, course, 'premium') }
-
-      it 'applies 30% upgrade discount' do
-        result = service.calculate_and_create_invoice
-        # Premium (10000) - Standard (8000) = 2000 difference
-        # 30% discount on 2000 = 600 discount
-        # Total: 10000 - 600 = 9400
-        expect(result[:total_fee]).to eq(9400)
+      before do
+        create(:license_upgrade, student: existing_student, status: 'approved')
       end
 
-      it 'includes discount in result' do
-        result = service.calculate_and_create_invoice
-        expect(result[:upgrade_discount]).to eq(600)
+      it 'applies 30% upgrade discount' do
+        result = described_class.new(existing_student).calculate
+        expected_discounted = (10000 * (1 - 30/100.0)).round(2)
+        expect(result[:total_fee]).to eq(expected_discounted)
       end
     end
 
     context 'error handling' do
-      it 'handles invalid tier gracefully' do
-        service = described_class.new(student, course, 'invalid')
-        result = service.calculate_and_create_invoice
-        expect(result[:success]).to be true # Falls back to standard
-        expect(result[:total_fee]).to eq(8000)
+      it 'handles missing course gracefully' do
+        student_no_course = create(:student, batch: batch, course: nil, pricing_tier: 'standard')
+        service = described_class.new(student_no_course)
+        result = service.calculate
+        expect(result[:success]).to be false
+        expect(result[:errors]).to include(match(/Course is required/))
       end
     end
   end

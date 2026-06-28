@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_27_120007) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_28_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -125,12 +125,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_120007) do
     t.datetime "created_at", null: false
     t.text "description"
     t.date "due_date"
+    t.string "invoice_number"
+    t.jsonb "metadata", default: {}
     t.string "milestone_type", null: false
     t.datetime "paid_at"
+    t.string "payment_method"
+    t.string "payment_reference"
     t.string "status", default: "pending", null: false
     t.bigint "student_id", null: false
     t.datetime "updated_at", null: false
+    t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
     t.index ["milestone_type"], name: "index_invoices_on_milestone_type"
+    t.index ["payment_method"], name: "index_invoices_on_payment_method"
     t.index ["status"], name: "index_invoices_on_status"
     t.index ["student_id"], name: "index_invoices_on_student_id"
   end
@@ -219,6 +225,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_120007) do
     t.string "first_name"
     t.string "house_number"
     t.string "identification_document"
+    t.bigint "instructor_id"
     t.string "kebele"
     t.date "last_attendance_date"
     t.string "last_name"
@@ -251,6 +258,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_120007) do
     t.index ["course_id"], name: "index_students_on_course_id"
     t.index ["document_id"], name: "index_students_on_document_id", unique: true
     t.index ["email"], name: "index_students_on_email", unique: true
+    t.index ["instructor_id"], name: "index_students_on_instructor_id"
     t.index ["license_category"], name: "index_students_on_license_category"
     t.index ["penalty_end_date"], name: "index_students_on_penalty_end_date"
     t.index ["student_id"], name: "index_students_on_student_id", unique: true
@@ -290,4 +298,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_120007) do
   add_foreign_key "payroll_entries", "users"
   add_foreign_key "students", "batches"
   add_foreign_key "students", "courses"
+  add_foreign_key "students", "users", column: "instructor_id"
 end

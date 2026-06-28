@@ -16,9 +16,9 @@ RSpec.describe Finance::PayrollCalculator, type: :service do
     subject(:calculator) { described_class.new(instructor, month: 6, year: 2024) }
 
     context 'base salary only' do
-      it 'calculates base salary of 15,000 ETB' do
+      it 'calculates base pay of 15,000 ETB' do
         result = calculator.calculate_payroll
-        expect(result[:breakdown][:base_salary]).to eq(15_000)
+        expect(result[:breakdown][:base_pay]).to eq(15_000)
       end
 
       it 'creates payroll entry' do
@@ -32,30 +32,26 @@ RSpec.describe Finance::PayrollCalculator, type: :service do
     end
 
     context 'with student load bonus' do
-      # Note: This test would need actual student-instructor associations
-      # which may not exist yet. Test structure is provided.
-      
       it 'adds 200 ETB per student' do
-        # Mock student count
         allow_any_instance_of(described_class).to receive(:count_active_students).and_return(10)
-        
+
         result = calculator.calculate_payroll
-        expect(result[:breakdown][:student_load_bonus]).to eq(2000) # 10 * 200
-        expect(result[:breakdown][:total_salary]).to eq(17_000)
+        expect(result[:breakdown][:student_load_bonus]).to eq(2000)
+        expect(result[:breakdown][:total_pay]).to eq(17_000)
       end
     end
 
     context 'with performance bonus' do
       it 'adds 1,000 ETB when pass rate > 80%' do
         allow_any_instance_of(described_class).to receive(:calculate_pass_rate).and_return(85.0)
-        
+
         result = calculator.calculate_payroll
         expect(result[:breakdown][:performance_bonus]).to eq(1000)
       end
 
       it 'does not add bonus when pass rate <= 80%' do
         allow_any_instance_of(described_class).to receive(:calculate_pass_rate).and_return(75.0)
-        
+
         result = calculator.calculate_payroll
         expect(result[:breakdown][:performance_bonus]).to eq(0)
       end
@@ -65,13 +61,13 @@ RSpec.describe Finance::PayrollCalculator, type: :service do
       it 'calculates all components correctly' do
         allow_any_instance_of(described_class).to receive(:count_active_students).and_return(15)
         allow_any_instance_of(described_class).to receive(:calculate_pass_rate).and_return(90.0)
-        
+
         result = calculator.calculate_payroll
-        
-        expect(result[:breakdown][:base_salary]).to eq(15_000)
-        expect(result[:breakdown][:student_load_bonus]).to eq(3000) # 15 * 200
+
+        expect(result[:breakdown][:base_pay]).to eq(15_000)
+        expect(result[:breakdown][:student_load_bonus]).to eq(3000)
         expect(result[:breakdown][:performance_bonus]).to eq(1000)
-        expect(result[:breakdown][:total_salary]).to eq(19_000)
+        expect(result[:breakdown][:total_pay]).to eq(19_000)
       end
     end
 
@@ -84,7 +80,7 @@ RSpec.describe Finance::PayrollCalculator, type: :service do
       it 'returns error on duplicate attempt' do
         calculator.calculate_payroll
         result = calculator.calculate_payroll
-        
+
         expect(result[:success]).to be false
         expect(result[:errors]).to include(match(/already exists/))
       end
@@ -94,7 +90,7 @@ RSpec.describe Finance::PayrollCalculator, type: :service do
       it 'rejects non-instructor users' do
         admin = create(:user, role: 'admin')
         calculator = described_class.new(admin, month: 6, year: 2024)
-        
+
         result = calculator.calculate_payroll
         expect(result[:success]).to be false
         expect(result[:errors]).to include(match(/instructor/))
@@ -120,8 +116,8 @@ RSpec.describe Finance::PayrollCalculator, type: :service do
     end
 
     it 'does not process non-instructors' do
-      results = described_class.calculate_all_for_month(month: 6, year: 2024)
-      expect(PayrollEntry.where(instructor: admin)).to be_empty
+      described_class.calculate_all_for_month(month: 6, year: 2024)
+      expect(PayrollEntry.where(user_id: admin.id).count).to eq(0)
     end
   end
 end
